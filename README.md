@@ -146,3 +146,87 @@ GRAPH.QUERY . "MATCH (k:module) WITH k, size((k:module)-[:imports]->(:module)) a
    665) 1) "idlelib.editor"
         2) (integer) 14
 ```
+# EDA with test-related nodes removed 
+* find node imported by largest amount of other nodes ()
+```
+GRAPH.QUERY . "MATCH (k) WITH k, size(()-[:imports]->(k)) as degree WHERE degree > 0 RETURN k.full_name, degree ORDER BY degree"
+```
+>> 
+```
+    618) 1) "..warnings"
+        2) (integer) 21
+   619) 1) "..io"
+        2) (integer) 25
+   620) 1) "collections"
+        2) (integer) 26
+   621) 1) "lib2to3.pgen2.token"
+        2) (integer) 27
+   622) 1) "distutils.log"
+        2) (integer) 30
+   623) 1) "lib2to3.fixer_util.Name"
+        2) (integer) 35
+   624) 1) "..re"
+        2) (integer) 37
+   625) 1) "lib2to3.fixer_base"
+        2) (integer) 49
+   626) 1) "..os"
+        2) (integer) 65
+```
+* Nodes called by most other nodes 
+
+```
+GRAPH.QUERY . "MATCH (k) WITH k, size(()-[:calls]->(k)) as degree WHERE degree > 0 RETURN k.full_name, degree ORDER BY degree"
+```
+>> 
+```
+9229) 1) "idlelib.pyshell.PyShell"
+         2) (integer) 225
+   9230) 1) "..aifc.Aifc_write"
+         2) (integer) 230
+   9231) 1) "idlelib.autocomplete_w.AutoCompleteWindow"
+         2) (integer) 254
+   9232) 1) "..imaplib.IMAP4"
+         2) (integer) 311
+   9233) 1) "tkinter.__init__.Misc"
+         2) (integer) 370
+   9234) 1) "..turtle.RawTurtle"
+         2) (integer) 371
+   9235) 1) "..pdb.Pdb"
+         2) (integer) 382
+   9236) 1) "idlelib.editor.EditorWindow"
+         2) (integer) 468
+   9237) 1) ".._pydecimal.Decimal"
+         2) (integer) 652
+   9238) 1) "..os"
+         2) (integer) 1112
+```
+* Largest packages 
+
+```
+GRAPH.QUERY . "MATCH (k:package) WITH k, size((k:package)-[:contains]->()) as degree WHERE degree > 0 RETURN k.full_name, degree ORDER BY degree"
+```
+>> 
+```
+   31) 1) "tkinter"
+       2) (integer) 14
+   32) 1) "email"
+       2) (integer) 20
+   33) 1) "turtledemo"
+       2) (integer) 21
+   34) 1) "multiprocessing"
+       2) (integer) 21
+   35) 1) "distutils.command"
+       2) (integer) 23
+   36) 1) "distutils"
+       2) (integer) 28
+   37) 1) "asyncio"
+       2) (integer) 29
+   38) 1) "lib2to3.fixes"
+       2) (integer) 53
+   39) 1) "idlelib"
+       2) (integer) 59
+   40) 1) "encodings"
+       2) (integer) 123
+   41) 1) "."
+```
+
