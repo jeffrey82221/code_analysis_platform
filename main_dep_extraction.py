@@ -29,7 +29,7 @@ def main(pkg):
             f.write(dockerfile)
         try:
             os.system(
-                f'docker build -f dockerfiles/{pkg}.Dockerfile -t {pkg} . &> build_logs/{pkg}.log')
+                f'docker build --no-cache -f dockerfiles/{pkg}.Dockerfile -t {pkg} . &> build_logs/{pkg}.log')
             image_id = os.popen(
                 f"docker images -q '{pkg}' | uniq").readlines()[0].replace('\n', '')
             subprocess.run(
