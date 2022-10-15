@@ -7,6 +7,8 @@ TODO:
 import requests
 import sys
 
+VERBOSE = False
+
 
 def parse_result(dep):
     if "extra == 'test'" in dep:
@@ -26,16 +28,21 @@ def main(pkg):
     url = f'https://pypi.org/pypi/{pkg}/json'
     json = requests.get(url).json()
     if 'info' in json:
-        if 'Source Code' in json['info']['project_urls']:
-            print(json['info']['project_urls']['Source Code'])
-        elif 'Download' in json['info']['project_urls']:
-            print(json['info']['project_urls']['Download'])
+        if VERBOSE and 'project_urls' in json['info'] and json['info']['project_urls'] is not None:
+            if 'Source Code' in json['info']['project_urls']:
+                print(json['info']['project_urls']['Source Code'])
+            elif 'Download' in json['info']['project_urls']:
+                print(json['info']['project_urls']['Download'])
         if json['info']['requires_dist'] is not None:
-            return list(map(parse_result, json['info']['requires_dist']))
+            result = list(map(parse_result, json['info']['requires_dist']))
         else:
-            return []
+            result = []
+        if VERBOSE:
+            print('dep found for', pkg)
+        return result
     else:
-        raise ValueError('package not found')
+        if VERBOSE:
+            print('package not found for', pkg)
 
 
 if __name__ == '__main__':
