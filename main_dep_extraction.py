@@ -2,7 +2,7 @@ import os
 import sys
 import subprocess
 from datetime import datetime
-
+import shutil
 
 def parse_log(path):
     match = False
@@ -39,7 +39,11 @@ def main(pkg):
             subprocess.run(f"docker image prune --force".split(), check=True)
             return list(parse_log(log_path))
         except BaseException as e:
+            if os.path.exists(log_path):
+                os.remove(log_path)
             raise ValueError('Failed installing the package') from e
+        finally:
+            os.remove(f'dockerfiles/{pkg}.Dockerfile')
 
 
 if __name__ == '__main__':
