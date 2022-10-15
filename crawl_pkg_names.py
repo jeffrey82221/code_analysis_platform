@@ -1,11 +1,11 @@
 """
 TODO:
-- [ ] Extracting dependency edge list from pypi 
+- [ ] Extracting dependency edge list from pypi
     - [X] 1. download package names from pypi: package_names.txt
     - [X] 2. build a new environment of python3.9
-    - [X] 3. pip install a package 
+    - [X] 3. pip install a package
     - [X] 4. get dependency by checking the folders ("pandas_venv/lib/python3.9/site-packages")
-            before and after the package is installed. 
+            before and after the package is installed.
     - [ ] 5. allow extract_dep_pkgs to be run in container or colab!
     - [ ] 6. build the dependency edge lists
 """
@@ -26,11 +26,10 @@ try:
     body = soup.find('body')
     links = (pkg for pkg in body.find_all('a'))
     pkg_names = [link['href'].split('/')[-2] for link in list(links)]
-except:
+except BaseException:
     print('ERROR: Could not parse pypi HTML.')
     exit(1)
 
 with open('package_names.txt', 'w') as f:
     for n in pkg_names:
-        f.write(n+'\n')
-
+        f.write(n + '\n')
