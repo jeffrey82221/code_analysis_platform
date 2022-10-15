@@ -4,6 +4,7 @@ import subprocess
 from datetime import datetime
 import shutil
 
+
 def parse_log(path):
     match = False
     with open(path, 'r') as f:
