@@ -1,11 +1,12 @@
 
-# As a demo, I'm just going to install 5 random packages
-# If you *really* want to install them all, remove this
-# limit and the sampling of 'list(links)'
+"""
+TODO:
+- Install package in container 
+    - [ ] `docker build -f pkg.Dockerfile -t pkg . --progress=plain`
+"""
 import subprocess
-import platform
 import os
-from distutils import util
+import sys
 import shutil
 
 def main(pkg):
@@ -35,5 +36,8 @@ def main(pkg):
         shutil.rmtree(f'./{pkg}_env')
         
 if __name__ == '__main__':
-    ans = main('pytorch-lightning')
-    print(ans)
+    print('Extract Time:', sys.argv[2])
+    deps = main(sys.argv[1])
+    print('########## DEPEDENCIES ##########')
+    for dep in deps:
+        print(f'A-DEP-PACKAGE:\start;{dep}\end;')
