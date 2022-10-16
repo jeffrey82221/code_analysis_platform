@@ -21,7 +21,7 @@ def parse_result(dep):
         result = dep.split(';')[0]
     if '[' in result and ']' in result:
         result = result.split('[')[0]
-    return result.strip(), mode
+    return [result.strip(), mode]
 
 
 def main(pkg):
