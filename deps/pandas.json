@@ -1,0 +1,1 @@
+[["python-dateutil", "dep"], ["pytz", "dep"], ["numpy", "dep"], ["numpy", "dep"], ["hypothesis", "test-dep"], ["pytest", "test-dep"], ["pytest-xdist", "test-dep"]]

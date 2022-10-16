@@ -1,0 +1,1 @@
+[["setproctitle", "dep"], ["bottle", "dep"], ["waitress", "dep"], ["configparser", "dep"], ["monotonic", "dep"], ["selectors2", "dep"]]
