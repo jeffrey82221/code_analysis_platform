@@ -1,0 +1,14 @@
+:START_ID(PKG),:END_ID(PKG),test_purpose:BOOL
+accelerator,setproctitle,False
+accelerator,bottle,False
+accelerator,waitress,False
+accelerator,configparser,False
+accelerator,monotonic,False
+accelerator,selectors2,False
+pandas,python-dateutil,False
+pandas,pytz,False
+pandas,numpy,False
+pandas,numpy,False
+pandas,hypothesis,True
+pandas,pytest,True
+pandas,pytest-xdist,True
