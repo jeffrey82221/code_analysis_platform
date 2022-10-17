@@ -6,8 +6,7 @@ TODO:
 """
 import requests
 import sys
-
-VERBOSE = False
+import os
 
 
 def parse_result(dep):
@@ -21,14 +20,14 @@ def parse_result(dep):
         result = dep.split(';')[0]
     if '[' in result and ']' in result:
         result = result.split('[')[0]
-    return [result.strip(), mode]
+    return (result.strip(), mode)
 
 
-def main(pkg):
+def main(pkg, verbose=False):
     url = f'https://pypi.org/pypi/{pkg}/json'
     json = requests.get(url).json()
     if 'info' in json:
-        if VERBOSE and 'project_urls' in json['info'] and json['info']['project_urls'] is not None:
+        if verbose and 'project_urls' in json['info'] and json['info']['project_urls'] is not None:
             if 'Source Code' in json['info']['project_urls']:
                 print(json['info']['project_urls']['Source Code'])
             elif 'Download' in json['info']['project_urls']:
@@ -37,14 +36,24 @@ def main(pkg):
             result = list(map(parse_result, json['info']['requires_dist']))
         else:
             result = []
-        if VERBOSE:
+        if verbose:
             print('dep found for', pkg)
-        return result
+        return [list(x) for x in list(set(result))]
     else:
-        if VERBOSE:
+        if verbose:
             print('package not found for', pkg)
 
 
 if __name__ == '__main__':
-    deps = main(sys.argv[1])
-    print(deps)
+    try:
+        verbose = (sys.argv[2] == '1')
+    except:
+        verbose = False
+    print('verbose:', verbose)
+    deps = main(sys.argv[1], verbose=verbose)
+    if verbose and isinstance(deps, list):
+        print(deps)
+        for dep in deps:
+            if dep[1] == 'dep':
+                print('#', dep[0])
+                os.system(f'python pkg_desc_api.py {dep[0]}')
