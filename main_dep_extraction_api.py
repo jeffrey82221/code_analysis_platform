@@ -20,7 +20,7 @@ def parse_result(dep):
         result = dep.split(';')[0]
     if '[' in result and ']' in result:
         result = result.split('[')[0]
-    return [result.strip(), mode]
+    return (result.strip(), mode)
 
 
 def main(pkg, verbose=False):
@@ -38,7 +38,7 @@ def main(pkg, verbose=False):
             result = []
         if verbose:
             print('dep found for', pkg)
-        return result
+        return [list(x) for x in list(set(result))]
     else:
         if verbose:
             print('package not found for', pkg)
@@ -46,12 +46,14 @@ def main(pkg, verbose=False):
 
 if __name__ == '__main__':
     try:
-        verbose = (sys.argv[2] == 1)
+        verbose = (sys.argv[2] == '1')
     except:
         verbose = False
+    print('verbose:', verbose)
     deps = main(sys.argv[1], verbose=verbose)
     if verbose and isinstance(deps, list):
+        print(deps)
         for dep in deps:
             if dep[1] == 'dep':
-                print(dep[0])
+                print('#', dep[0])
                 os.system(f'python pkg_desc_api.py {dep[0]}')
