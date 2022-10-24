@@ -23,6 +23,11 @@ signal.signal(signal.SIGINT, close_connection)
 
 - linkml: a linked data modeling language following object-oriented and ontological principles.
 
+- pyomo: Python Optimization Modeling Objects
+
+- pm4py: State-of-the-art-process mining in Python
+
+- deeplake: Deep Lake (formerly known as Activeloop Hub) is a data lake for deep learning applications.
 
 # Scrapper
 
