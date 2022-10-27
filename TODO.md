@@ -1,6 +1,6 @@
 # General
 
-- [ ] organize the folder (sort by analysis topics)
+- [X] organize the folder (sort by analysis topics)
 
 # Inter-package analyzer 
 

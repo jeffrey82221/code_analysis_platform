@@ -17,7 +17,7 @@ python build_dep_csv.py
 
 4. build node csv:
 ```
-python build_pkg_csv.py
+python build_pkg_n_dep_csv.py
 ```
 
 5. bulk insert csv into redisgraph:

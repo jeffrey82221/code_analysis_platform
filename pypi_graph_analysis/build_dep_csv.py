@@ -1,6 +1,8 @@
 """
-TODO:
+Step 3: Build Dependency Edge List CSV file 
 
+Input: deps/*.json
+Output: deps.csv
 """
 import json
 import os

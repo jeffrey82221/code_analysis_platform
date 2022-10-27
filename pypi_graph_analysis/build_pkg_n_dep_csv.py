@@ -1,3 +1,12 @@
+"""
+Step 4: Building revised dependency edges list and node list CSV files
+
+Input: 
+    deps.csv
+Output: 
+    dep_edge.csv
+    pkg.csv
+"""
 import pandas as pd
 dep_table = pd.read_csv('deps.csv')
 pkg_table = pd.concat([dep_table[':START_ID(PKG)'], dep_table[':END_ID(PKG)']], axis=0).unique()
