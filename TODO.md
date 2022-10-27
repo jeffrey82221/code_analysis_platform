@@ -9,7 +9,7 @@ Build graph of depedency between packages for analysis
 - [X] Crawl data from pypi API 
 - [X] Build Dependency Graph on RedisGraph
 - [X] Cypher-analysis DEMO notes
-      - [ ] Way of adding PageRank score back to graph as node property
+      - [X] Way of adding PageRank score back to graph as node property
       - [ ] Way of propagating population degrees (such as Star count, fork count) to all nodes
       - [ ] Way of applying PageRank-like algorithm on heterogeneous graph
 - [ ] Add additional node properties
