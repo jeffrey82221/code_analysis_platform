@@ -24,6 +24,13 @@ signal.signal(signal.SIGINT, close_connection)
 - linkml: a linked data modeling language following object-oriented and ontological principles.
 
 - hunter: Hunter is a flexible code tracing toolkit, not for measuring coverage, but for debugging, logging, inspection and other nefarious purposes.
+
+- pyomo: Python Optimization Modeling Objects
+
+- pm4py: State-of-the-art-process mining in Python
+
+- deeplake: Deep Lake (formerly known as Activeloop Hub) is a data lake for deep learning applications.
+
 # Scrapper
 
 - linkedin-scraper: Scrapes Linkedin User Data
