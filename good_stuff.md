@@ -23,7 +23,7 @@ signal.signal(signal.SIGINT, close_connection)
 
 - linkml: a linked data modeling language following object-oriented and ontological principles.
 
-
+- hunter: Hunter is a flexible code tracing toolkit, not for measuring coverage, but for debugging, logging, inspection and other nefarious purposes.
 # Scrapper
 
 - linkedin-scraper: Scrapes Linkedin User Data
