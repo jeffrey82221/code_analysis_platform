@@ -3,7 +3,7 @@ Step 2: crawl dependent package of all packages of pypi
 Input: package_names.txt
 Output: deps/<pkg_name>.json
 """
-from main_dep_extraction_api import main as call_deps
+from api.dep import main as call_deps
 from concurrent.futures import ThreadPoolExecutor
 import json
 import os
