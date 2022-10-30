@@ -1,8 +1,6 @@
 
 """
-TODO:
-- Install package in container
-    - [ ] `docker build -f pkg.Dockerfile -t pkg . --progress=plain`
+Package Discription Crawled from PyPi
 """
 import requests
 import sys

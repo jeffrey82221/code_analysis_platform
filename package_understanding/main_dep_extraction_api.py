@@ -1,8 +1,6 @@
 
 """
-TODO:
-- Install package in container
-    - [ ] `docker build -f pkg.Dockerfile -t pkg . --progress=plain`
+Check Dependency Via PyPi API
 """
 import requests
 import sys

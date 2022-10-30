@@ -1,15 +1,9 @@
 """
-TODO:
-- [ ] Extracting dependency edge list from pypi
-    - [X] 1. download package names from pypi: package_names.txt
-    - [X] 2. build a new environment of python3.9
-    - [X] 3. pip install a package
-    - [X] 4. get dependency by checking the folders ("pandas_venv/lib/python3.9/site-packages")
-            before and after the package is installed.
-    - [ ] 5. allow extract_dep_pkgs to be run in container or colab!
-    - [ ] 6. build the dependency edge lists
+Step 2: crawl dependent package of all packages of pypi
+Input: package_names.txt
+Output: deps/<pkg_name>.json
 """
-from main_dep_extraction_api import main as call_deps
+from api.dep import main as call_deps
 from concurrent.futures import ThreadPoolExecutor
 import json
 import os
