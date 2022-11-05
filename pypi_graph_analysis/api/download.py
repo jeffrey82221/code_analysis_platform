@@ -4,18 +4,27 @@ pip install pypistats
 """
 import pypistats
 import sys
+"""
+pip install redis-decorators
+pip install fakeredis
+"""
 import json
 from httpx import HTTPStatusError
 import time
+from redis_decorators import RedisCaching
+caching = RedisCaching('redis://localhost:6379')
+# Define a custom `CacheElement`
 
-def main(pkg):
+
+@caching.cache_string()
+def call_pypistats(pkg):
     DELAY = 0.01
     cnt_404 = 0
     cnt_429 = 0
     while True:
         try:
+            result = -1
             data = json.loads(pypistats.overall(pkg, format="json"))['data']
-            result = None
             if len(data) == 2:
                 if data[1]['category'] == 'without_mirrors':
                     result = data[1]['downloads']
@@ -34,7 +43,7 @@ def main(pkg):
                 cnt_429 += 1
                 time.sleep(DELAY)
                 DELAY += DELAY
-                if cnt_429 > 10:
+                if cnt_429 > 8:
                     print(e.args[0], cnt_429, pkg)
                 continue
             elif '404 NOT FOUND' in e.args[0]:
@@ -43,14 +52,20 @@ def main(pkg):
                 DELAY += DELAY
                 print(e.args[0], cnt_404, pkg)
                 if cnt_404 > 10:
-                    result = None
                     break
                 else:
                     continue
             else:
                 raise e
     return result
-        
+
+
+def main(pkg):
+    result = call_pypistats(pkg)
+    if isinstance(result, str):
+        result = int(result)
+    return result
+
 
 if __name__ == '__main__':
     ans = main(sys.argv[1])

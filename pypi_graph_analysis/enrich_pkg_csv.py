@@ -15,10 +15,14 @@ def get_import_names(pkg_names):
     with concurrent.futures.ThreadPoolExecutor(max_workers=8) as executor:
         result = list(executor.map(call_import_name, tqdm.tqdm(pkg_names)))
     return result
+
+
 def get_download_cnts(pkg_names):
     with concurrent.futures.ThreadPoolExecutor(max_workers=1) as executor:
         result = list(tqdm.tqdm(executor.map(call_download_cnt, pkg_names, chunksize=100), total=len(pkg_names)))
     return result
+
+
 if __name__ == '__main__':
     table = pd.read_csv('pkg.csv')
     table['download_count'] = get_download_cnts(table.name.tolist())
