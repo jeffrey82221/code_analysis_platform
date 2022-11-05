@@ -31,6 +31,11 @@ signal.signal(signal.SIGINT, close_connection)
 
 - deeplake: Deep Lake (formerly known as Activeloop Hub) is a data lake for deep learning applications.
 
+- taichi: high-performance physics engine for python (also, open-source, imperative, parallel programming language for high-performance numerical computation.)
+
+- pyflowchart: translate Python source codes into flowcharts 
+
+
 # Scrapper
 
 - linkedin-scraper: Scrapes Linkedin User Data

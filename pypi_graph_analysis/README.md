@@ -49,6 +49,15 @@ FLUSHALL
 ```
 redis-cli -h localhost -p 9001
 ```
+## Calculate PageRank and set as node property (score)
+
+```
+GRAPH.QUERY DGraph "CALL algo.pageRank('pkg', 'dep_edge') YIELD node, score SET node.score=score"
+```
+## DEMO: Find downstream package with top PageRank
+```
+GRAPH.QUERY DGraph "MATCH (n)-[r]->(m) where m.name = 'astunparse' RETURN n.name, n.score AS importance ORDER BY importance DESC LIMIT 10"
+```
 ## Understand the Graph structure 
 ```
 GRAPH.QUERY DGraph "MATCH ()-[r]-() RETURN DISTINCT type(r)"
@@ -100,11 +109,7 @@ GRAPH.QUERY DGraph "MATCH (n)-[]->(m) where m.name = 'ray' RETURN n.name, indegr
    	5) 1) "alibi"
    	   2) (integer) 14
 
-### Calculate PageRank and set as node property (score)
 
-```
-GRAPH.QUERY DGraph "CALL algo.pageRank('pkg', 'dep_edge') YIELD node, score SET node.score=score"
-```
 ### Find upstream packages of a package (e.g., pandas) and Rank by popularity (in-degree):
 ```
 GRAPH.QUERY DGraph "MATCH (m)-[r]->(n) where m.name = 'networkx-neo4j' RETURN n.name, indegree(n) AS popularity ORDER BY popularity DESC LIMIT 10"
@@ -156,7 +161,7 @@ GRAPH.QUERY DGraph "MATCH (m)-[r]->(n) where m.name = 'johnnydep' RETURN n.name,
        
 ### Rank by PageRank 
 ```
-GRAPH.QUERY DGraph "MATCH (m)-[r]->(n) where m.name = 'johnnydep' RETURN n.name, n.score AS importance ORDER BY importance DESC LIMIT 10"
+GRAPH.QUERY DGraph "MATCH (m)-[r]->(n) where m.name = 'astunparse' RETURN n.name, n.score AS importance ORDER BY importance DESC LIMIT 10"
 ```
 ## Overall Analysis
 
