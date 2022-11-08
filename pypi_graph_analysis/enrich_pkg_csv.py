@@ -25,7 +25,23 @@ def get_download_cnts(pkg_names):
 
 if __name__ == '__main__':
     table = pd.read_csv('pkg.csv')
-    table['download_count'] = get_download_cnts(table.name.tolist())
-    # table['import_name'] = get_import_names(table.name.tolist())
-    print(table.sort_values('download_count'))
+    def clean_up_name(name):
+        if '~=' in name:
+            name = name.split('~=')[0]
+        if '!=' in name:
+            name = name.split('!=')[0]
+        if '>=' in name:
+            name = name.split('>=')[0]
+        if '<' in name:
+            name = name.split('<')[0]
+        if ';' in name:
+            name = name.split(';')[0]
+        if '==' in name:
+            name = name.split('==')[0]
+        if '>' in name:
+            name = name.split('>')[0]
+        return name.strip()
+    table['name_alias'] = table.name.map(clean_up_name)
+    table['download_count'] = get_download_cnts(table.name_alias.tolist())
     table.to_csv('pkg_full.csv', index=False)
+    print(table[table.download_count == -1].name.tolist())

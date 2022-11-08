@@ -51,7 +51,7 @@ def call_pypistats(pkg):
                 time.sleep(DELAY)
                 DELAY += DELAY
                 print(e.args[0], cnt_404, pkg)
-                if cnt_404 > 10:
+                if cnt_404 > 6:
                     break
                 else:
                     continue

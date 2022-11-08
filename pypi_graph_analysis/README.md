@@ -32,7 +32,7 @@ redis-stack-server --port 9001
 
 ```
 pip install redisgraph-bulk-loader
-redisgraph-bulk-insert DGraph -h 127.0.0.1 -p 9001 -n pkg.csv -r dep_edge.csv
+redisgraph-bulk-insert DGraph -h 127.0.0.1 -p 9001 -n pkg_full.csv -r dep_edge.csv
 ```
 
 If DGraph already exists, flush the redis-stack-server to clean up all data
@@ -54,10 +54,25 @@ redis-cli -h localhost -p 9001
 ```
 GRAPH.QUERY DGraph "CALL algo.pageRank('pkg', 'dep_edge') YIELD node, score SET node.score=score"
 ```
-## DEMO: Find downstream package with top PageRank
+## DEMO 1: Find downstream package with top PageRank
 ```
-GRAPH.QUERY DGraph "MATCH (n)-[r]->(m) where m.name = 'astunparse' RETURN n.name, n.score AS importance ORDER BY importance DESC LIMIT 10"
+GRAPH.QUERY DGraph "MATCH (n)-[r]->(m) where m.name = 'astunparse' RETURN n.name, n.score AS importance, n.download_count AS popularity ORDER BY importance DESC LIMIT 10"
 ```
+## DEMO 2: Find downstream package with top download count 
+
+```
+GRAPH.QUERY DGraph "MATCH (n)-[r]->(m) where m.name = 'astunparse' RETURN n.name, n.score AS importance, n.download_count AS popularity ORDER BY popularity DESC LIMIT 10"
+```
+## DEMO 3: Find package with highest download count
+```
+import pandas as pd
+table = pd.read_csv('pkg_full.csv')
+table['name_alias'] = table['name_alias'].map(lambda x: x.lower())
+table['name_alias'] = table['name_alias'].map(lambda x: x.replace('_', '-').replace('.', '-'))
+table.groupby('name_alias')['download_count'].mean().sort_values(ascending=False).iloc[:20]
+
+```
+
 ## Understand the Graph structure 
 ```
 GRAPH.QUERY DGraph "MATCH ()-[r]-() RETURN DISTINCT type(r)"
