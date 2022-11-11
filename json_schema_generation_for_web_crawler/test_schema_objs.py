@@ -1,6 +1,6 @@
 import pytest
 import copy
-from schema_objs import Simple, List, Dict, Union, Optional, UniformDict
+from schema_objs import Simple, List, Dict, Union, Optional, UniformDict, Unknown
 
 @pytest.fixture()
 def simple_int():
@@ -60,6 +60,7 @@ def test_repr(
     assert str(optional_int) == 'Optional[int]'
     assert str(optional_int_list) == 'Optional[List[int]]'
     assert str(Optional(int_float_dict)) == "Optional[Dict[{'a': int, 'b': float}]]"
+    assert str(Unknown()) == '?'
 
 def test_equal(
     simple_int, simple_float, simple_none,
@@ -77,12 +78,18 @@ def test_equal(
     assert simple_none != simple_int
     assert simple_int != int_list
     assert complex_dict != int_float_dict
-
+    assert Unknown() == Unknown()
+    assert Unknown() != int_list
+    assert int_list != Unknown()
 
 def test_union(
      simple_int, simple_float, simple_none,
     int_list, float_list, int_float_dict, complex_dict, int_float_union
-):
+):  
+    assert (Unknown() | simple_int) == simple_int
+    assert (simple_int | Unknown()) == simple_int
+    assert (Unknown() | Unknown()) == Unknown()
+    assert (List(Unknown()) | List(simple_int)) == List(simple_int)
     assert (simple_int | simple_int) == simple_int
     assert (simple_float | simple_float) == simple_float
     assert (float_list | float_list) == float_list
@@ -112,6 +119,7 @@ def test_union(
 def test_set(simple_int, simple_float, simple_none,
     int_list, float_list, int_float_dict, complex_dict, int_float_union
 ):
+    assert Union.set([]) == Unknown()
     assert Union.set([simple_int, simple_float]) == int_float_union
     assert Union.set([simple_int, simple_none]) == Optional(simple_int)
     assert Union.set([int_list, float_list, int_float_dict]) == Union({List(Union({simple_int, simple_float})), int_float_dict})

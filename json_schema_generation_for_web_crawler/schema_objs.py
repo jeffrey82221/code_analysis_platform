@@ -6,7 +6,8 @@ TODO:
 - [X] Set operation of JsonSchema(s) (defined as staticmethod of Union)
     - converting a list of JsonSchemas into one schema. 
 - [X] UniformDict build
-- [ ] A SchemaFitter that infer Schema from Json(s)
+- [X] A SchemaFitter that infer Schema from Json(s)
+- [ ] Consider empty list in schema objs / fitter
 """
 import abc
 import copy
@@ -19,11 +20,13 @@ __all__ = [
     'Union',
     'Dict',
     'Optional',
-    'UniformDict'
+    'UniformDict',
+    'Unknown'
 ]
 
+
 class JsonSchema:
-    def __init__(self, content):
+    def __init__(self, content=None):
         self._content = content
         self.check_content()
     @abc.abstractmethod
@@ -41,7 +44,7 @@ class JsonSchema:
     def _base_or(self, e):
         old = copy.deepcopy(self)
         new = copy.deepcopy(e)
-        if old == new:
+        if old == new or isinstance(e, Unknown):
             return old
         else:
             if old._content is None:
@@ -71,7 +74,7 @@ class Simple(JsonSchema):
     def __init__(self, content: type):
         super().__init__(content)
     def check_content(self):
-        assert isinstance(self._content, type) or self._content == None
+        assert isinstance(self._content, type) or self._content == None, 'Simple content should be `int`, `str`, `float`, or `None`'
     def __repr__(self):
         if self._content is None:
             return 'None'
@@ -82,7 +85,7 @@ class List(JsonSchema):
     def __init__(self, content: JsonSchema):
         super().__init__(content)
     def check_content(self):
-        assert isinstance(self._content, JsonSchema)
+        assert isinstance(self._content, JsonSchema), 'List content should be JsonSchema'
     def __repr__(self):
         return f'List[{self._content}]'
     def __or__(self, e):
@@ -92,18 +95,30 @@ class List(JsonSchema):
             return List(old._content | new._content)
         else:
             return self._base_or(e)
-            
+
+class Unknown(JsonSchema):
+    def check_content(self):
+        pass
+    def __or__(self, e):
+        return e
+    def __repr__(self):
+        return '?'
+
 class Union(JsonSchema):
     @staticmethod
-    def set(json_schemas: typing.List[JsonSchema]):
-        return reduce(lambda a, b: a | b, json_schemas)
+    def set(json_schemas: typing.List[JsonSchema]) -> JsonSchema:
+        if json_schemas:
+            result = reduce(lambda a, b: a | b, json_schemas)
+        else:
+            result = Unknown()
+        return result
 
     def __init__(self, content: typing.Set[JsonSchema]):
         super().__init__(content)
     def check_content(self):
-        assert isinstance(self._content, set)
+        assert isinstance(self._content, set), 'Union content should be set'
         for e in self._content:
-            assert isinstance(e, JsonSchema)
+            assert isinstance(e, JsonSchema), 'Union content elements should be JsonSchema'
     def __repr__(self):
         content_str = ','.join(map(str, list(self._content)))
         return f'Union[{content_str}]'
@@ -150,10 +165,10 @@ class Dict(JsonSchema):
     def __init__(self, content: dict):
         super().__init__(content)
     def check_content(self):
-        assert isinstance(self._content, dict)
+        assert isinstance(self._content, dict), 'Dict content should be dict'
         for key in self._content:
-            assert isinstance(key, str)
-            assert isinstance(self._content[key], JsonSchema)
+            assert isinstance(key, str), 'Dict content key should be str'
+            assert isinstance(self._content[key], JsonSchema), 'Dict content value should be JsonSchema'
     def __repr__(self):
         return f'Dict[{self._content}]'
     def __hash__(self):
@@ -181,7 +196,7 @@ class UniformDict(JsonSchema):
         super().__init__(content)
     
     def check_content(self):
-        assert isinstance(self._content, JsonSchema)
+        assert isinstance(self._content, JsonSchema), f'UniformDict content should be JsonSchema, but it is {self._content}'
 
     def __repr__(self):
         return f'UniformDict[{self._content}]'
