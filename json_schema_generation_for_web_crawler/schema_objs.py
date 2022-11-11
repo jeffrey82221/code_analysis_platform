@@ -12,6 +12,16 @@ import abc
 import copy
 import typing
 from functools import reduce
+
+__all__ = [
+    'Simple',
+    'List',
+    'Union',
+    'Dict',
+    'Optional',
+    'UniformDict'
+]
+
 class JsonSchema:
     def __init__(self, content):
         self._content = content
