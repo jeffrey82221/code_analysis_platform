@@ -1,10 +1,10 @@
 """
-Json Schema Objects 
+Json Schema Objects
 that supports union operations
 
 TODO:
 - [X] Set operation of JsonSchema(s) (defined as staticmethod of Union)
-    - converting a list of JsonSchemas into one schema. 
+    - converting a list of JsonSchemas into one schema.
 - [X] UniformDict build
 - [X] A SchemaFitter that infer Schema from Json(s)
 - [X] Consider empty list in schema objs / fitter
@@ -31,15 +31,17 @@ class JsonSchema:
     def __init__(self, content=None):
         self._content = content
         self.check_content()
+
     @abc.abstractmethod
     def check_content(self):
         raise NotImplementedError
+
     def __eq__(self, e):
-        if type(self) == type(e):
+        if isinstance(self, type(e)):
             return self._content == e._content
         else:
             return False
-    
+
     def __or__(self, e):
         return self._base_or(e)
 
@@ -70,29 +72,39 @@ class JsonSchema:
 
     def __hash__(self):
         return self._base_hash()
-    
+
+
 class Simple(JsonSchema):
     """
-    simple json units, such as `int`, `float`, `null`, 
+    simple json units, such as `int`, `float`, `null`,
         `str`, etc.
     """
+
     def __init__(self, content: type):
         super().__init__(content)
+
     def check_content(self):
-        assert isinstance(self._content, type) or self._content == None, 'Simple content should be `int`, `str`, `float`, or `None`'
+        assert isinstance(
+            self._content, type) or self._content is None, 'Simple content should be `int`, `str`, `float`, or `None`'
+
     def __repr__(self):
         if self._content is None:
             return 'None'
         else:
             return self._content.__name__
-    
+
+
 class List(JsonSchema):
     def __init__(self, content: JsonSchema):
         super().__init__(content)
+
     def check_content(self):
-        assert isinstance(self._content, JsonSchema), 'List content should be JsonSchema'
+        assert isinstance(
+            self._content, JsonSchema), 'List content should be JsonSchema'
+
     def __repr__(self):
         return f'List[{self._content}]'
+
     def __or__(self, e):
         if isinstance(e, List):
             new = copy.deepcopy(e)
@@ -101,13 +113,17 @@ class List(JsonSchema):
         else:
             return self._base_or(e)
 
+
 class Unknown(JsonSchema):
     def check_content(self):
         pass
+
     def __or__(self, e):
         return e
+
     def __repr__(self):
         return '?'
+
 
 class Union(JsonSchema):
     @staticmethod
@@ -120,13 +136,17 @@ class Union(JsonSchema):
 
     def __init__(self, content: typing.Set[JsonSchema]):
         super().__init__(content)
+
     def check_content(self):
         assert isinstance(self._content, set), 'Union content should be set'
         for e in self._content:
-            assert isinstance(e, JsonSchema), 'Union content elements should be JsonSchema'
+            assert isinstance(
+                e, JsonSchema), 'Union content elements should be JsonSchema'
+
     def __repr__(self):
         content_str = ','.join(map(str, list(self._content)))
         return f'Union[{content_str}]'
+
     def __or__(self, e):
         new = copy.deepcopy(e)
         if isinstance(new, Union):
@@ -138,16 +158,19 @@ class Union(JsonSchema):
             new_set = copy.deepcopy(self._content)
             new_set.add(new)
             return Union(new_set)
+
     def __hash__(self):
         return hash(tuple(self._content))
-    
+
 
 class Optional(Union):
     def __init__(self, content: JsonSchema):
         self._the_content = content
         super().__init__({Simple(None), content})
+
     def __repr__(self):
         return f'Optional[{self._the_content}]'
+
     def __or__(self, e: JsonSchema):
         old = copy.deepcopy(self)
         new = copy.deepcopy(e)
@@ -164,18 +187,24 @@ class Optional(Union):
                 result = Optional(old._the_content | new)
             return result
 
+
 class Dict(JsonSchema):
     def __init__(self, content: dict):
         super().__init__(content)
+
     def check_content(self):
         assert isinstance(self._content, dict), 'Dict content should be dict'
         for key in self._content:
             assert isinstance(key, str), 'Dict content key should be str'
-            assert isinstance(self._content[key], JsonSchema), 'Dict content value should be JsonSchema'
+            assert isinstance(
+                self._content[key], JsonSchema), 'Dict content value should be JsonSchema'
+
     def __repr__(self):
         return f'Dict[{self._content}]'
+
     def __hash__(self):
         return hash(tuple(sorted(self._content.items())))
+
     def __or__(self, e):
         if isinstance(e, Dict):
             old = copy.deepcopy(self)
@@ -186,7 +215,8 @@ class Dict(JsonSchema):
                 return old
             else:
                 result_dict = {}
-                for key in set(list(old._content.keys()) + list(new._content.keys())):
+                for key in set(list(old._content.keys()) +
+                               list(new._content.keys())):
                     if key in old._content and key in new._content:
                         result_dict[key] = old._content[key] | new._content[key]
                     elif key in old._content:
@@ -196,31 +226,38 @@ class Dict(JsonSchema):
                 return DynamicDict(result_dict)
         else:
             return self._base_or(e)
+
     def to_uniform_dict(self):
         schemas = [v for v in self._content.values()]
         uniform_content = Union.set(schemas)
         return UniformDict(uniform_content)
+
 
 class DynamicDict(Dict):
     """
     Dictionary where keys are not strict
     (some keys can be optional)
     """
+
     def __init__(self, content: dict):
         super().__init__(content)
+
     def __repr__(self):
         return f'DynamicDict[{self._content}]'
-    
+
+
 class UniformDict(JsonSchema):
     """
-    Dictionary where value elements 
+    Dictionary where value elements
     are united into a JsonSchema.
     """
+
     def __init__(self, content: JsonSchema):
         super().__init__(content)
-    
+
     def check_content(self):
-        assert isinstance(self._content, JsonSchema), f'UniformDict content should be JsonSchema, but it is {self._content}'
+        assert isinstance(
+            self._content, JsonSchema), f'UniformDict content should be JsonSchema, but it is {self._content}'
 
     def __repr__(self):
         return f'UniformDict[{self._content}]'
