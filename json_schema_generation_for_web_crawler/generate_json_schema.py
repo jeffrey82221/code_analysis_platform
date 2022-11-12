@@ -26,7 +26,7 @@ from schema_fitter import fit, try_unify_dict
 from schema_objs import Union
 if __name__ == '__main__':
     json_schemas = []
-    with open('package_names.txt', 'r') as f:
+    with open('../pypi_graph_analysis/package_names.txt', 'r') as f:
         for i, pkg in enumerate(f):
             pkg = pkg.strip()
             if i > 1000:
