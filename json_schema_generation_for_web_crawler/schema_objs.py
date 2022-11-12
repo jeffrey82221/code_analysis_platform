@@ -8,6 +8,8 @@ TODO:
 - [X] UniformDict build
 - [X] A SchemaFitter that infer Schema from Json(s)
 - [ ] Consider empty list in schema objs / fitter
+- [ ] A unify_callback to Union.set 
+    - [ ] Allow 
 """
 import abc
 import copy
@@ -51,7 +53,10 @@ class JsonSchema:
                 if new._content is None:
                     return old
                 else:
-                    return Optional(new)
+                    if isinstance(new, Optional):
+                        return new
+                    else:
+                        return Optional(new)
             elif new._content is None:
                 return Optional(old)
             elif isinstance(new, Union):
@@ -200,3 +205,11 @@ class UniformDict(JsonSchema):
 
     def __repr__(self):
         return f'UniformDict[{self._content}]'
+
+    def __or__(self, e):
+        if isinstance(e, UniformDict):
+            new = copy.deepcopy(e)
+            old = copy.deepcopy(self)
+            return UniformDict(old._content | new._content)
+        else:
+            return self._base_or(e)

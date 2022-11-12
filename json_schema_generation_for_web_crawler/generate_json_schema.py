@@ -23,11 +23,18 @@ TODO:
 from schema_fitter import fit, try_unify_dict
 from schema_objs import Union
 if __name__ == '__main__':
-
-    data1 = requests.get(f'https://pypi.org/pypi/pandas/json').json()
-    data2 = requests.get(f'https://pypi.org/pypi/networkx/json').json()
-    data3 = requests.get(f'https://pypi.org/pypi/tensorflow/json').json()
-    schemas = [fit(d, unify_callback=try_unify_dict) for d in [data1, data2, data3]]
-    union_schema = Union.set(schemas)
+    json_schemas = []
+    with open('package_names.txt', 'r') as f:
+        for i, pkg in enumerate(f):
+            pkg = pkg.strip()
+            if i > 1000:
+                break
+            url = f'https://pypi.org/pypi/{pkg}/json'
+            print(url)
+            json = requests.get(url).json()
+            if 'info' in json:
+                # pprint.pprint(json)
+                json_schemas.append(fit(json, unify_callback=try_unify_dict))
+    union_schema = Union.set(json_schemas)
     pprint.pprint(union_schema)
     
