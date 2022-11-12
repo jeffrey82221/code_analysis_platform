@@ -21,15 +21,6 @@ def test_unify_dict_callback():
     assert fit(
         {'1': {'a': 5, 'b': 6}, '2': {'a': 34, 'b': None}},
         unify_callback=try_unify_dict
-    ) == UniformDict({'a': Simple(int), 'b': Optional(Simple(int))})
-
-
-def test_unify_dict_callback():
-    assert fit({'1': 1, '2': 2}, unify_callback=try_unify_dict) == Dict(
-        {'1': Simple(int), '2': Simple(int)})
-    assert fit(
-        {'1': {'a': 5, 'b': 6}, '2': {'a': 34, 'b': None}},
-        unify_callback=try_unify_dict
     ) == UniformDict(Dict({'a': Simple(int), 'b': Optional(Simple(int))}))
     assert fit(
         {'1': [{'a': 5, 'b': 6}], '2': [{'a': 34, 'b': None}]},
