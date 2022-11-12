@@ -7,9 +7,8 @@ TODO:
     - converting a list of JsonSchemas into one schema. 
 - [X] UniformDict build
 - [X] A SchemaFitter that infer Schema from Json(s)
-- [ ] Consider empty list in schema objs / fitter
-- [ ] A unify_callback to Union.set 
-    - [ ] Allow 
+- [X] Consider empty list in schema objs / fitter
+- [X] Add DynamicDict object to represent dictionary with changing of keys
 """
 import abc
 import copy
@@ -23,7 +22,8 @@ __all__ = [
     'Dict',
     'Optional',
     'UniformDict',
-    'Unknown'
+    'Unknown',
+    'DynamicDict'
 ]
 
 
@@ -148,23 +148,21 @@ class Optional(Union):
         super().__init__({Simple(None), content})
     def __repr__(self):
         return f'Optional[{self._the_content}]'
-    def __or__(self, e):
+    def __or__(self, e: JsonSchema):
         old = copy.deepcopy(self)
         new = copy.deepcopy(e)
-        if new._content is None:
-            return old
-        elif old == new:
+        if new._content is None or old == new or old._the_content == new:
             return old
         else:
-            if old._the_content == new:
-                return old
-            else:
-                new_set = copy.deepcopy(old._content)
-                if isinstance(new, Union):
-                    new_set |= new._content
+            # add element in new to the orignal element in OptionalUnion
+            if isinstance(new, Union):
+                if isinstance(new, Optional):
+                    result = Optional(old._the_content | new._the_content)
                 else:
-                    new_set.add(new)
-                return Union(new_set)
+                    result = Optional(old._the_content | new)
+            else:
+                result = Optional(old._the_content | new)
+            return result
 
 class Dict(JsonSchema):
     def __init__(self, content: dict):
@@ -177,14 +175,25 @@ class Dict(JsonSchema):
     def __repr__(self):
         return f'Dict[{self._content}]'
     def __hash__(self):
-        return hash(tuple(sorted(self._content.items())))    
+        return hash(tuple(sorted(self._content.items())))
     def __or__(self, e):
-        if isinstance(e, Dict) and self._content.keys() == e._content.keys():
+        if isinstance(e, Dict):
             old = copy.deepcopy(self)
             new = copy.deepcopy(e)
-            for key in old._content:
-                old._content[key] |= new._content[key]
-            return old
+            if old._content.keys() == new._content.keys():
+                for key in old._content:
+                    old._content[key] |= new._content[key]
+                return old
+            else:
+                result_dict = {}
+                for key in set(list(old._content.keys()) + list(new._content.keys())):
+                    if key in old._content and key in new._content:
+                        result_dict[key] = old._content[key] | new._content[key]
+                    elif key in old._content:
+                        result_dict[key] = old._content[key]
+                    elif key in new._content:
+                        result_dict[key] = new._content[key]
+                return DynamicDict(result_dict)
         else:
             return self._base_or(e)
     def to_uniform_dict(self):
@@ -192,6 +201,16 @@ class Dict(JsonSchema):
         uniform_content = Union.set(schemas)
         return UniformDict(uniform_content)
 
+class DynamicDict(Dict):
+    """
+    Dictionary where keys are not strict
+    (some keys can be optional)
+    """
+    def __init__(self, content: dict):
+        super().__init__(content)
+    def __repr__(self):
+        return f'DynamicDict[{self._content}]'
+    
 class UniformDict(JsonSchema):
     """
     Dictionary where value elements 

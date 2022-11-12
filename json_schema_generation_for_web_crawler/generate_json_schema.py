@@ -18,6 +18,8 @@ TODO:
 - [X] Build another create_schema with keys of dictionary shown 
 - [X] Generate consistet schema to allow multiple json's schema to be merged into a more consistent schema 
 - [ ] Convert Schema to a Python DataClass
+    - [ ] A class extract json properties one-by-one
+    - [ ] A class generate overall json content 
 - [ ] An adaptor that takes json as input and initialize the python DataClass
 """
 from schema_fitter import fit, try_unify_dict

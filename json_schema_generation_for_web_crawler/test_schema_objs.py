@@ -1,6 +1,6 @@
 import pytest
 import copy
-from schema_objs import Simple, List, Dict, Union, Optional, UniformDict, Unknown
+from schema_objs import Simple, List, Dict, Union, Optional, UniformDict, Unknown, DynamicDict
 
 @pytest.fixture()
 def simple_int():
@@ -31,6 +31,10 @@ def complex_dict():
     return Dict({'a': Simple(int), 'b': List(Simple(float)), 'c': Dict({'a': Simple(str), 'b': Optional(Simple(int))})})
 
 @pytest.fixture()
+def dynamic_dict():
+    return DynamicDict({'a': Simple(int), 'b': Simple(float)})
+
+@pytest.fixture()
 def int_float_union():
     return Union({Simple(int), Simple(float)})
 
@@ -45,7 +49,7 @@ def optional_int_list():
 def test_repr(
         simple_int, simple_float, simple_none,
         int_list, float_list, int_float_dict, complex_dict, int_float_union,
-        optional_int, optional_int_list
+        optional_int, optional_int_list, dynamic_dict
     ):
     assert str(simple_int) == 'int'
     assert str(simple_float) == 'float'
@@ -53,6 +57,7 @@ def test_repr(
     assert str(int_list) == 'List[int]'
     assert str(float_list) == 'List[float]'
     assert str(int_float_dict) == "Dict[{'a': int, 'b': float}]"
+    assert str(dynamic_dict) == "DynamicDict[{'a': int, 'b': float}]"
     assert str(complex_dict) == "Dict[{'a': int, 'b': List[float], 'c': Dict[{'a': str, 'b': Optional[int]}]}]"
     assert str(int_float_union) == 'Union[int,float]'
     assert str(simple_float|simple_int) == 'Union[int,float]'
@@ -61,6 +66,7 @@ def test_repr(
     assert str(optional_int_list) == 'Optional[List[int]]'
     assert str(Optional(int_float_dict)) == "Optional[Dict[{'a': int, 'b': float}]]"
     assert str(Unknown()) == '?'
+    
 
 def test_equal(
     simple_int, simple_float, simple_none,
@@ -104,17 +110,16 @@ def test_union(
     assert (simple_int|simple_none|simple_int) == Optional(simple_int)
     assert (Optional(simple_int)|Simple(None)) == Optional(simple_int)
     assert (Optional(simple_float)|Optional(simple_float)) == Optional(simple_float)
-    assert (Optional(simple_float)|simple_int) == Union({simple_int, simple_float, simple_none})
-    assert (Optional(simple_float)|Optional(simple_int)) == Union({simple_int, simple_float, simple_none})
-    assert (simple_int|Optional(simple_float)) == Union({simple_int, simple_float, simple_none})
+    assert (Optional(simple_float)|simple_int) == Optional(Union({simple_int, simple_float}))
+    assert (Optional(simple_float)|Optional(simple_int)) == Optional(Union({simple_int, simple_float}))
+    assert (simple_int|Optional(simple_float)) == Optional(Union({simple_int, simple_float}))
     assert (simple_int|Union({simple_float, simple_int})) == Union({simple_int, simple_float})
     assert float_list | int_list == List(Union({simple_float, simple_int}))
     assert float_list | List(Optional(Simple(float))) == List(Optional(simple_float))
     assert Dict({'a': Simple(int), 'b': Simple(float)}) | Dict({'a': Simple(int), 'b': Simple(float)}) == Dict({'a': Simple(int), 'b': Simple(float)})
     assert Dict({'a': Simple(int), 'b': Simple(float)}) | Dict({'a': Simple(None), 'b': Simple(float)}) == Dict({'a': Optional(Simple(int)), 'b': Simple(float)})
-    assert Dict({'a': Simple(int), 'b': Simple(float)}) | Dict({'a': Simple(int)}) == Union(
-        {Dict({'a': Simple(int), 'b': Simple(float)}), Dict({'a': Simple(int)})}
-        )
+    assert Dict({'a': Simple(int), 'b': Simple(float)}) | Dict({'a': Simple(int)}) == DynamicDict({'a': Simple(int), 'b': Simple(float)})
+    assert Dict({'a': Simple(int)}) | Dict({'a': Simple(int), 'b': Simple(float)}) == DynamicDict({'a': Simple(int), 'b': Simple(float)})
     
 def test_set(simple_int, simple_float, simple_none,
     int_list, float_list, int_float_dict, complex_dict, int_float_union
@@ -128,6 +133,9 @@ def test_set(simple_int, simple_float, simple_none,
     assert len({Optional(simple_int), List(simple_int)}) == 2
     assert len({List(simple_int), List(simple_int)}) == 1
     assert len({Optional(simple_float), List(simple_float), UniformDict(simple_float)}) == 3
+    assert Union.set([Dict({'a': Simple(int)}), Dict({'a': Simple(int), 'b': Simple(float)})]) == DynamicDict({'a': Simple(int), 'b': Simple(float)})
+    assert Union.set([Simple(None), Dict({'a': Simple(int)})]) == Optional(Dict({'a': Simple(int)}))
+    assert Union.set([Simple(None), Dict({'a': Simple(int)}), Dict({'a': Simple(int), 'b': Simple(float)})]) == Optional(DynamicDict({'a': Simple(int), 'b': Simple(float)}))
 
 def test_to_uniform_dict(int_float_dict, simple_int, simple_float):
     assert int_float_dict.to_uniform_dict() == UniformDict(Union({simple_int, simple_float}))
