@@ -27,6 +27,7 @@ class PyPiPackageOverView(OverView):
                 print('ignore', v._pkg)
         return result
 
+
 class PypiVersionPackageView(SingleView):
     def __init__(self, pkg, version):
         self._pkg = pkg
@@ -36,9 +37,15 @@ class PypiVersionPackageView(SingleView):
     def url(self):
         return f'https://pypi.org/pypi/{self._pkg}/{self._version}/json'
 
+class PypiPackageAllVersionView(OverView):
+    def __init__(self, pkg):
+        pkg_view = PyPiPackageView(pkg)
+        inputs = [(pkg, version) for version in pkg_view.released_versions]
+        super().__init__(PypiVersionPackageView, inputs)
 
 if __name__ == '__main__':
-    
+    vo = PypiPackageAllVersionView('tensorflow')
+    print(vo.get('info', 'author_email'), vo.get('info', 'maintainer_email'))
     """
     v = PypiVersionPackageView('pandas', '1.5.0rc0')
     print(v.methods.keys())
@@ -53,7 +60,7 @@ if __name__ == '__main__':
     print('done')
     
     """
-
+    """
     print('========================== overview =============================')
     
     pkgs = []
@@ -77,3 +84,5 @@ if __name__ == '__main__':
         for re_dis in o.get('info', 'requires_dist', '_list_'):
             if re_dis is not None:
                 f.write(re_dis + '\n')
+
+    """
