@@ -19,10 +19,10 @@ class PyPiPackageOverView(OverView):
     
     @property
     def released_versions(self):
-        result = set()
+        result = dict()
         for v in self.views:
             try:
-                result |= v.released_versions
+                result[v._pkg] = sorted(v.released_versions)
             except KeyError:
                 print('ignore', v._pkg)
         return result
@@ -38,9 +38,10 @@ class PypiVersionPackageView(SingleView):
 
 
 if __name__ == '__main__':
+    
+    """
     v = PypiVersionPackageView('pandas', '1.5.0rc0')
     print(v.methods.keys())
-    """
     s = PyPiPackageView('pytz')
     print('========================== pandas ================================')
     print(s.methods.keys())
@@ -52,12 +53,27 @@ if __name__ == '__main__':
     print('done')
     
     """
+
     print('========================== overview =============================')
+    
     pkgs = []
     with open('../pypi_graph_analysis/package_names.txt', 'r') as f:
         for i, pkg in enumerate(f):
             pkg = pkg.strip()
             pkgs.append(pkg)
-    o = PyPiPackageOverView(pkgs[:1000])
+    o = PyPiPackageOverView(pkgs[:10000])
+    
     print(o.method_keys)
-    print(o.get('info', 'requires_python'))
+    with open('requires_python.txt', 'w') as f:
+        for re_py in o.get('info', 'requires_python'):
+            if re_py is not None:
+                f.write(re_py.strip()+'\n')
+    import json
+    with open('released_versions.json', 'w') as f:
+        json.dump(o.released_versions, f)
+    
+    
+    with open('requires_dist.txt', 'w') as f:
+        for re_dis in o.get('info', 'requires_dist', '_list_'):
+            if re_dis is not None:
+                f.write(re_dis + '\n')

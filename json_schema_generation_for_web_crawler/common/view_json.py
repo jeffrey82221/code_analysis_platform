@@ -142,15 +142,20 @@ class OverView:
     """
     def __init__(self, _class: SingleView, inputs: typing.List[typing.Tuple]):
         self.views = [_class(*arg) for arg in inputs]
-        with concurrent.futures.ThreadPoolExecutor(max_workers=24) as executor:
+        with concurrent.futures.ThreadPoolExecutor(max_workers=48) as executor:
             self.schema = Union.set(tqdm.tqdm(executor.map(lambda v: v.schema, self.views, chunksize=100), total=len(inputs)))
         self.method_keys = reduce(lambda a, b: a|b, map(lambda v: set(v.methods.keys()), self.views))
     
     def get(self, *args):
-        result = []
+        result = set()
         for v in self.views:
             try:
-                result.append(v.get(*args))
+                js = v.get(*args)
+                if isinstance(js, list):
+                    js = set(js)
+                    result |= js
+                else:
+                    result.add(js)
             except KeyError:
                 pass
-        return set(result)
+        return result
