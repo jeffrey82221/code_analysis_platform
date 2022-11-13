@@ -1,7 +1,7 @@
 """
 
 Overview Graph: 
-(pkg) <-> (release) -> (release: {requires_python, yanked}) <-> [(author), (maintainer), (keyword)] 
+(pkg) <-> (release) -> (release: {requires_python, yanked, size}) <-> [(author), (maintainer), (keyword)] 
 
 Interesting Raw Feautres: 
 - author_email :          a related node 
