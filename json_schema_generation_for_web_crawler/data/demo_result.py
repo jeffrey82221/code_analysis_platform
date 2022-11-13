@@ -1,7 +1,7 @@
 """
 
 Overview Graph: 
-(pkg) <-> (release) -> (release: {requires_python, yanked, size}) <-> [(author), (maintainer), (keyword)] 
+(pkg) <-> (release) -[dep hyper-edge: link-to:{(python_version), (extra), platform}]-> (release: {requires_python, yanked, size}) <-> [(author), (maintainer), (keyword)] 
 
 Interesting Raw Feautres: 
 - author_email :          a related node 
@@ -91,3 +91,5 @@ Dict[{
     }]],
     'vulnerabilities': List[?]
 }]
+
+# ================================================================================================
