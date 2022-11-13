@@ -50,6 +50,8 @@ if __name__ == '__main__':
     print(s.methods.keys())
     print(s.methods[('info', 'requires_dist')]())
     print('done')
+    
+    """
     print('========================== overview =============================')
     pkgs = []
     with open('../pypi_graph_analysis/package_names.txt', 'r') as f:
@@ -57,6 +59,5 @@ if __name__ == '__main__':
             pkg = pkg.strip()
             pkgs.append(pkg)
     o = PyPiPackageOverView(pkgs[:1000])
-    print(o.schema)
-    print(o.released_versions)
-    """
+    print(o.method_keys)
+    print(o.get('info', 'requires_python'))

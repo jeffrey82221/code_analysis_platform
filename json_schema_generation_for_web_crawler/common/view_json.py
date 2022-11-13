@@ -9,14 +9,16 @@ UniformDict: expand to leaf
 """
 import abc
 import requests
-import schema_fitter
-from schema_objs import Dict, List, UniformDict, Union, Simple, Optional, Unknown, JsonSchema
+
 import typing
 import json
 import copy
 import tqdm
 import concurrent
+from functools import reduce
 from redis_decorators import RedisCaching
+from . import schema_fitter
+from .schema_objs import Dict, List, UniformDict, Union, Simple, Optional, Unknown, JsonSchema
 
 __all__ = ['SingleView', 'OverView']
 
@@ -127,6 +129,9 @@ class SingleView:
         for key in keys:
             result_json = result_json[key]
         return result_json
+    
+    def get(self, *args):
+        return self.methods[tuple(args)]()
 
 class OverView:
     """
@@ -139,3 +144,13 @@ class OverView:
         self.views = [_class(*arg) for arg in inputs]
         with concurrent.futures.ThreadPoolExecutor(max_workers=24) as executor:
             self.schema = Union.set(tqdm.tqdm(executor.map(lambda v: v.schema, self.views, chunksize=100), total=len(inputs)))
+        self.method_keys = reduce(lambda a, b: a|b, map(lambda v: set(v.methods.keys()), self.views))
+    
+    def get(self, *args):
+        result = []
+        for v in self.views:
+            try:
+                result.append(v.get(*args))
+            except KeyError:
+                pass
+        return set(result)
