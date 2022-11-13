@@ -22,8 +22,8 @@ TODO:
     - [ ] A class generate overall json content
 - [ ] An adaptor that takes json as input and initialize the python DataClass
 """
-from schema_fitter import fit, try_unify_dict
-from schema_objs import Union
+from common.schema_fitter import fit, try_unify_dict
+from common.schema_objs import Union
 if __name__ == '__main__':
     json_schemas = []
     with open('../pypi_graph_analysis/package_names.txt', 'r') as f:

@@ -1,6 +1,6 @@
 import pytest
 import copy
-from schema_objs import Simple, List, Dict, Union, Optional, UniformDict, Unknown, DynamicDict
+from common.schema_objs import Simple, List, Dict, Union, Optional, UniformDict, Unknown, DynamicDict
 
 
 @pytest.fixture()

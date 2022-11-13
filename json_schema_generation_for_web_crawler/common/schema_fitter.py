@@ -1,4 +1,4 @@
-from schema_objs import Dict, List, Simple, Union
+from .schema_objs import Dict, List, Simple, Union
 
 
 def fit(data, unify_callback=None):

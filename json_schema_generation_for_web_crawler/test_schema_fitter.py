@@ -1,5 +1,5 @@
-from schema_objs import Dict, List, Simple, Optional, Union, UniformDict, Unknown
-from schema_fitter import fit, try_unify_dict
+from common.schema_objs import Dict, List, Simple, Optional, Union, UniformDict, Unknown
+from common.schema_fitter import fit, try_unify_dict
 
 
 def test_fit():

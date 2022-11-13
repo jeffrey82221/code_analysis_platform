@@ -1,4 +1,4 @@
-from view_json import SingleView, OverView
+from common.view_json import SingleView, OverView
 
 class PyPiPackageView(SingleView):
     def __init__(self, pkg):

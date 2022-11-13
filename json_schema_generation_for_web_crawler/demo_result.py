@@ -22,7 +22,7 @@ NOTE:
 - get another api result with data specific to a version ! 
 REF: https://discuss.python.org/t/backwards-incompatible-change-to-pypi-json-api/17154
 """
-from schema_objs import *
+from common.schema_objs import *
 Dict[{
     'info': Dict[{
         'author': Optional[str], # Author Node Name 
