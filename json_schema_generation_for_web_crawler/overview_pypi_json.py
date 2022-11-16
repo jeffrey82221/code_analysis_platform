@@ -13,6 +13,7 @@ TODO:
             - [ ] allow decomposition into different os
         - [ ] Building Platform node object
     - [ ] Develop python-version property (returning Python-version objs)
+        - [ ] Search for all python versions
     - [ ] Build Dependency-Hyperedge Obj
 """
 import typing
@@ -132,10 +133,11 @@ class PypiPackageAllVersionView(OverView):
         """
         return [PypiVersionPackageView(self._pkg, v._ver_id) for v in self.versions]
 
+
 if __name__ == '__main__':
-    releases = PypiPackageAllVersionView('pandas').releases
+    releases = PypiPackageAllVersionView('tensorflow').releases
     print(releases)
-    p = releases[0]
+    p = releases[-1]
     print(p.author_info)
     print(p.maintainer_info)
     print(p.requires_python)
