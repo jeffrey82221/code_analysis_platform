@@ -1,15 +1,15 @@
 """
 TODO:
     - [ ] Release Version
-        - [ ] Version class with version id as input
-        - [ ] develop sorting algorithm for version ids
+        - [X] Version class with version id as input
+        - [X] develop sorting algorithm for version ids
         - [ ] Version constraint class that takes dependent string as input
         - [ ] Version constraint class that can determine whether a Version obj fit or not
     - [ ] Platform
         - [ ] Develop platform tags data cleaning strategy at PypiVersionPackageVeiw
-            - [ ] seperate by ; and ,
-            - [ ] lower cases
-            - [ ] strip space
+            - [X] seperate by ; and ,
+            - [X] lower cases
+            - [X] strip space
             - [ ] allow decomposition into different os
         - [ ] Building Platform node object
     - [ ] Develop python-version property (returning Python-version objs)
@@ -17,6 +17,30 @@ TODO:
 """
 import typing
 from common.view_json import SingleView, OverView
+
+class Version:
+    def __init__(self, ver_id: str):
+        self._ver_id = ver_id
+        self._id = [str(i) if i.isdigit() else i for i in ver_id.split('.')]
+
+    def __hash__(self):
+        return hash(self._id)
+
+    def __eq__(self, x):
+        return self._id == x._id
+
+    def __ge__(self, x):
+        return self._id > x._id
+
+    def __lt__(self, x):
+        try:
+            return self._id < x._id
+        except BaseException as e:
+            print('self._id', self._id, 'x._id', x._id)
+            raise e
+
+    def __repr__(self):
+        return f'Version[{self._ver_id}]'
 
 class PyPiPackageView(SingleView):
     def __init__(self, pkg):
@@ -29,7 +53,7 @@ class PyPiPackageView(SingleView):
 
     @property
     def released_versions(self):
-        return set(self.methods[('releases',)]().keys())
+        return sorted([Version(id) for id in self.methods[('releases',)]().keys() if 'rc' not in id])
     
 class PyPiPackageOverView(OverView):
     def __init__(self, pkgs):
@@ -68,12 +92,30 @@ class PypiVersionPackageView(SingleView):
         email = self.methods[('info', 'maintainer_email')]()
         return (maintainer, email)
 
+    @property
+    def requires_python(self):
+        return self.methods[('info', 'requires_python')]()
 
+
+    @property
+    def platform(self):
+        platform_str = self.methods[('info', 'platform')]()
+        if isinstance(platform_str, str):
+            if ',' in platform_str:
+                platforms = [x.lower().strip() for x in platform_str.split(',')]
+            elif ';' in platform_str:
+                platforms = [x.lower().strip() for x in platform_str.split(';')]
+            else:
+                platforms = [platform_str.lower().strip()]
+            return platforms
+        else:
+            return platform_str
 
 class PypiPackageAllVersionView(OverView):
     def __init__(self, pkg):
+        self._pkg = pkg
         self._pkg_view = PyPiPackageView(pkg)
-        inputs = [(pkg, version) for version in self.versions]
+        inputs = [(pkg, version._ver_id) for version in self.versions]
         super().__init__(PypiVersionPackageView, inputs)
 
     @property
@@ -81,22 +123,23 @@ class PypiPackageAllVersionView(OverView):
         """
         Get sorted version ids
         """
-        return list(self._pkg_view.released_versions)
+        return self._pkg_view.released_versions
 
     @property
     def releases(self) -> PypiVersionPackageView:
         """
         Get sorted release data objs
         """
-        pass
+        return [PypiVersionPackageView(self._pkg, v._ver_id) for v in self.versions]
 
 if __name__ == '__main__':
-    ver = PypiPackageAllVersionView('pandas').versions[0]
-    print(ver)
-    p = PypiVersionPackageView('pandas', ver)
+    releases = PypiPackageAllVersionView('pandas').releases
+    print(releases)
+    p = releases[0]
     print(p.author_info)
     print(p.maintainer_info)
-
+    print(p.requires_python)
+    print(p.platform)
     """
     print('========================== overview =============================')
     
