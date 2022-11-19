@@ -3,10 +3,10 @@ TODO:
     - [ ] Release Version
         - [X] Version class with version id as input
         - [X] develop sorting algorithm for version ids
-        - [ ] parsing of required_dist str
-        - [ ] Version constraint class that takes dependent string as input
+        - [X] parsing of required_dist str
+        - [X] Version constraint class that takes dependent string as input
         - [ ] Version constraint class that can determine whether a Version obj fit or not
-        - [ ] Ignoring RC versions
+        - [X] Ignoring RC versions
     - [ ] Platform
         - [ ] Develop platform tags data cleaning strategy at PypiVersionPackageVeiw
             - [X] seperate by ; and ,
