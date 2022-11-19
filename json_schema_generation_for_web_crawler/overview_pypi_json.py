@@ -1,5 +1,8 @@
 """
 TODO:
+
+    - [ ] Refactor:
+        - [ ] seperate version / constraint related class & package & release related classes
     - [X] Release Version
         - [X] Version class with version id as input
         - [X] develop sorting algorithm for version ids
@@ -14,12 +17,15 @@ TODO:
             - [X] strip space
             - [ ] allow decomposition into different os
         - [ ] Building Platform node object
-    - [ ] Develop python-version property (returning Python-version objs)
+    - [X] Develop python-version property (returning Python-version objs)
         - [X] Search for all python versions
         - [X] Version constraint class that takes dependent string as input
         - [X] Version constraint class that can determine whether a Version obj fit or not
-        - [ ] Embedding into the Big class
+        - [X] Embedding into the Big class
     - [ ] Build Dependency-Hyperedge Obj
+        - [ ] Scan for all extra conditions
+        - [ ] Add python package nodes
+        - [ ] Add dependency condition
 """
 import copy
 import re
