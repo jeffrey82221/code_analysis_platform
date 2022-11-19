@@ -81,7 +81,7 @@ class SingleView:
         elif isinstance(schema, Union):
             raise ValueError('There is Union in schema. Watch out!')
         elif isinstance(schema, Unknown):
-            print('Ignore Unknown for getter creation, tokens:', tokens)
+            pass
         else:
             raise ValueError('Undefined Schema Obj, schema:', schema, 'tokens:', tokens)
 

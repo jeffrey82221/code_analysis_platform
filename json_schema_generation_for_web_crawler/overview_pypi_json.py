@@ -1,11 +1,11 @@
 """
 TODO:
-    - [ ] Release Version
+    - [X] Release Version
         - [X] Version class with version id as input
         - [X] develop sorting algorithm for version ids
         - [X] parsing of required_dist str
         - [X] Version constraint class that takes dependent string as input
-        - [ ] Version constraint class that can determine whether a Version obj fit or not
+        - [X] Version constraint class that can determine whether a Version obj fit or not
         - [X] Ignoring RC versions
     - [ ] Platform
         - [ ] Develop platform tags data cleaning strategy at PypiVersionPackageVeiw
@@ -41,53 +41,19 @@ class Version:
         return self._id == x._id
 
     def __ge__(self, x):
-        assert isinstance(self._id, list)
-        assert isinstance(x._id, list)
-        return Version._ge(copy.copy(self._id), copy.copy(x._id))
+        return self._id >= x._id
 
-    @staticmethod
-    def _ge(lfs_ids, rhs_ids):
-        if type(lfs_ids[0]) == type(rhs_ids[0]):
-            if lfs_ids[0] > rhs_ids[0]:
-                return True
-            else:
-                return False
-        elif isinstance(lfs_ids[0], str):
-            return lfs_ids[0] > str(rfs_ids[0])
-        elif isinstance(rhs_ids[0], str):
-            return str(lfs_ids[0]) > rfs_ids[0]
+    def __gt__(self, x):
+        return self._id > x._id
 
-        if len(lfs_ids) > 1:
-            lfs_ids.pop(0)
-            rhs_ids.pop(0)
-            return Version._ge(lfs_ids, rhs_ids)
-
+    def __le__(self, x):
+        return self._id <= x._id
 
     def __lt__(self, x):
-        assert isinstance(self._id, list)
-        assert isinstance(x._id, list)
-        return Version._lt(copy.copy(self._id), copy.copy(x._id))
-
-    @staticmethod
-    def _lt(lfs_ids, rhs_ids):
-        if type(lfs_ids[0]) == type(rhs_ids[0]):
-            if lfs_ids[0] < rhs_ids[0]:
-                return True
-            else:
-                return False
-        elif isinstance(lfs_ids[0], str):
-            return lfs_ids[0] < str(rfs_ids[0])
-        elif isinstance(rhs_ids[0], str):
-            return str(lfs_ids[0]) < rfs_ids[0]
-
-        if len(lfs_ids) > 1:
-            lfs_ids.pop(0)
-            rhs_ids.pop(0)
-            return Version._lt(lfs_ids, rhs_ids)
+        return self._id < x._id
 
     def __repr__(self):
         return f'Version[{self._ver_id}]'
-
 
 
 class PythonVersion(Version):
@@ -136,63 +102,35 @@ class SimpleConstraint:
     def __repr__(self):
         return f'S[{self._mode}{self._ver}]'
 
-    def fit(self, version: PythonVersion) -> bool:
+    def fit(self, version: Version) -> bool:
         if self._mode == '':
             return True
-        code = f'version {self._mode} PythonVersion("{self._ver}")'
+        code = f'version {self._mode} Version("{self._ver}")'
         ans = eval(code)
         return ans
 
-    def filter(self, versions: typing.Iterable[PythonVersion]) -> typing.Iterable[PythonVersion]:
+    def filter(self, versions: typing.Iterable[Version]) -> typing.Iterable[Version]:
         return filter(lambda v: self.fit(v), versions)
 
 
 class Constraint:
-    @staticmethod
-    def build(contraint_str):
+    def __init__(self, contraint_str: str):
         contraint_str = contraint_str.strip()
         if ',' in contraint_str:
-            return Constraint([SimpleConstraint(c) for c in contraint_str.split(',')])
+            self._constraints = [SimpleConstraint(c) for c in contraint_str.split(',')]
         else:
-            return Constraint([SimpleConstraint(contraint_str)])
+            self._constraints = [SimpleConstraint(contraint_str)]
 
-    def __init__(self, constraints):
-        self._constraints = constraints
-
-    def fit(self, version: PythonVersion) -> bool:
+    def fit(self, version: Version) -> bool:
         return all([c.fit(version) for c in self._constraints])
 
-    def filter(self, versions: typing.Iterable[PythonVersion]) -> typing.Iterable[PythonVersion]:
+    def filter(self, versions: typing.Iterable[Version]) -> typing.Iterable[Version]:
         return filter(lambda v: self.fit(v), versions)
 
     def __repr__(self):
         str_ = ','.join(map(str, self._constraints))
         return f'C[{str_}]'
 
-class DepConstraint:
-    def __init__(self, dep_constraint_str):
-        """
-        Input example:
-        pytest (>=7.1.2,<8.0.0); (python_full_version > "3.6.0") and (extra == "test")
-
-        ~=0.6 means >=0.6, ==0.*
-        """
-        if ';' in dep_constraint_str:
-            dep_str, condition_str = dep_constraint_str.split(';')
-        else:
-            dep_str = dep_constraint_str.strip()
-            condition_str = ''
-        if '(' in dep_str and ')' in dep_str:
-            self._pkg = dep_str.split(' (')[0].strip()
-            ver_constraint_str = dep_str.split(' (')[1].split(') ')[0].strip()
-            self._ver_constraint = Constraint.build(ver_constraint_str)
-        else:
-            self._pkg = re.split(f'[<|>|=|!|~]', dep_str)[0].strip()
-            self._ver_constraint = Constraint.build(dep_str.split(self._pkg)[1])
-        self._condition_str = condition_str.strip()
-
-    def __repr__(self):
-        return f'D[{self._pkg}@Ver[{self._ver_constraint}]@Cond[{self._condition_str}]]'
 
 class PyPiPackageView(SingleView):
     def __init__(self, pkg):
@@ -247,7 +185,7 @@ class PypiVersionPackageView(SingleView):
         return (maintainer, email)
 
     @property
-    def requires_dist(self) -> typing.Optional[DepConstraint]:
+    def requires_dist(self):
         result = []
         for con_str in self.methods[('info', 'requires_dist')]():
             result.append(DepConstraint(con_str))
@@ -256,7 +194,7 @@ class PypiVersionPackageView(SingleView):
     @property
     def requires_python(self) -> typing.List[PythonVersion]:
         constraint_str = self.methods[('info', 'requires_python')]()
-        constraint = Constraint.build(constraint_str)
+        constraint = Constraint(constraint_str)
         return sorted(list(filter(constraint.fit, PY_VERS)))
 
     @property
@@ -273,6 +211,10 @@ class PypiVersionPackageView(SingleView):
         else:
             return platform_str
 
+    @property
+    def summary(self):
+        return self.methods[('info', 'summary')]()
+
 class PypiPackageAllVersionView(OverView):
     def __init__(self, pkg):
         self._pkg = pkg
@@ -281,7 +223,7 @@ class PypiPackageAllVersionView(OverView):
         super().__init__(PypiVersionPackageView, inputs)
 
     @property
-    def versions(self) -> typing.List[str]:
+    def versions(self) -> typing.List[Version]:
         """
         Get sorted version ids
         """
@@ -299,9 +241,68 @@ class PypiPackageAllVersionView(OverView):
             return list(executor.map(get_result, self.versions, chunksize=2))
 
 
+class DepConstraint:
+    """
+    Hyperedge linked to
+    1. [X] package
+    2. [X] releases
+    3. condition
+        3.1. platform
+        3.2. python version
+        3.3. underlie package
+        3.4. non-package extra
+    """
+    def __init__(self, dep_constraint_str):
+        """
+        Input example:
+        pytest (>=7.1.2,<8.0.0); (python_full_version > "3.6.0") and (extra == "test")
+
+        ~=0.6 means >=0.6, ==0.*
+        """
+        if ';' in dep_constraint_str:
+            dep_str, condition_str = dep_constraint_str.split(';')
+        else:
+            dep_str = dep_constraint_str.strip()
+            condition_str = ''
+        if '(' in dep_str and ')' in dep_str:
+            self._pkg = dep_str.split(' (')[0].strip()
+            ver_constraint_str = dep_str.split('(')[1].split(')')[0].strip()
+            self._ver_constraint = Constraint(ver_constraint_str)
+        else:
+            self._pkg = re.split(f'[<|>|=|!|~]', dep_str)[0].strip()
+            self._ver_constraint = Constraint(dep_str.split(self._pkg)[1])
+        self._condition_str = condition_str.strip()
+
+    def __repr__(self):
+        return f'D[{self._pkg}@Ver[{self._ver_constraint}]@Cond[{self._condition_str}]]'
+
+    @property
+    def depend_releases(self):
+        """
+        Get sorted release data objs
+        """
+        def get_result(v):
+            return PypiVersionPackageView(self._pkg, v._ver_id)
+
+        with ThreadPoolExecutor(max_workers=4) as executor:
+            return list(executor.map(get_result, self._depend_versions, chunksize=1))
+
+    @property
+    def _depend_versions(self):
+        versions = self._depend_package.versions
+        return sorted(filter(self._ver_constraint.fit, versions))
+
+    @property
+    def _depend_package(self):
+        return PypiPackageAllVersionView(self._pkg)
+
 
 if __name__ == '__main__':
-    releases = PypiPackageAllVersionView('Sphinx').releases
+    releases = PypiPackageAllVersionView('pandas').releases
+    for dist in releases[-1].requires_dist:
+        print(dist)
+        print(dist.depend_releases)
+    """
     print(releases)
     print(releases[-1])
     print(releases[-1].requires_python)
@@ -311,7 +312,7 @@ if __name__ == '__main__':
     dependent_releases = PypiPackageAllVersionView(dep._pkg).releases
     print(dependent_releases)
     print(DepConstraint('alabaster>=0.7,<0.8'))
-    """
+
     p = releases[-1]
     print(p.author_info)
     print(p.maintainer_info)
