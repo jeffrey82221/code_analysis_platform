@@ -417,7 +417,6 @@ mypy ; extra == 'devel'
 xmltodict (==0.12.0)
 pylint; extra == 'pre-commit'
 bluepy (>=1.3.0,<2.0.0)
-azureml-train-restclients-hyperdrive (==1.33.0) ; extra == 'core'
 tabulate ; extra == 'bigquery-legacy'
 spglib (<2.0.0,>=1.10.0)
 acquisition-case-transform (>=0.1.2,<0.2.0)
