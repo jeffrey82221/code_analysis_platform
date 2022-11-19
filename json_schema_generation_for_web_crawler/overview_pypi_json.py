@@ -21,6 +21,8 @@ TODO:
         - [ ] Embedding into the Big class
     - [ ] Build Dependency-Hyperedge Obj
 """
+import copy
+import re
 import requests
 from bs4 import BeautifulSoup
 import typing
@@ -41,7 +43,7 @@ class Version:
     def __ge__(self, x):
         assert isinstance(self._id, list)
         assert isinstance(x._id, list)
-        return Version._ge(self._id, x._id)
+        return Version._ge(copy.copy(self._id), copy.copy(x._id))
 
     @staticmethod
     def _ge(lfs_ids, rhs_ids):
@@ -64,7 +66,7 @@ class Version:
     def __lt__(self, x):
         assert isinstance(self._id, list)
         assert isinstance(x._id, list)
-        return Version._lt(self._id, x._id)
+        return Version._lt(copy.copy(self._id), copy.copy(x._id))
 
     @staticmethod
     def _lt(lfs_ids, rhs_ids):
@@ -106,6 +108,7 @@ PY_VERS = python_versions()
 
 class SimpleConstraint:
     def __init__(self, contraint_str):
+        contraint_str = contraint_str.strip()
         if '>=' in contraint_str:
             self._mode = '>='
             self._ver = contraint_str.split('>=')[1]
@@ -124,6 +127,9 @@ class SimpleConstraint:
         elif '!=' in contraint_str:
             self._mode = '!='
             self._ver = contraint_str.split('!=')[1]
+        elif '~=' in contraint_str:
+            self._mode = '~='
+            self._ver = contraint_str.split('~=')[1]
         else:
             self._mode = ''
             self._ver = None
@@ -144,6 +150,7 @@ class SimpleConstraint:
 class Constraint:
     @staticmethod
     def build(contraint_str):
+        contraint_str = contraint_str.strip()
         if ',' in contraint_str:
             return Constraint([SimpleConstraint(c) for c in contraint_str.split(',')])
         else:
@@ -180,11 +187,12 @@ class DepConstraint:
             ver_constraint_str = dep_str.split(' (')[1].split(') ')[0].strip()
             self._ver_constraint = Constraint.build(ver_constraint_str)
         else:
-            self._pkg = dep_str.strip()
-            self._ver_constraint = Constraint.build('')
+            self._pkg = re.split(f'[<|>|=|!|~]', dep_str)[0].strip()
+            self._ver_constraint = Constraint.build(dep_str.split(self._pkg)[1])
         self._condition_str = condition_str.strip()
+
     def __repr__(self):
-        return f'DepC[{self._pkg}/{self._ver_constraint};{self._condition_str}]'
+        return f'D[{self._pkg}@Ver[{self._ver_constraint}]@Cond[{self._condition_str}]]'
 
 class PyPiPackageView(SingleView):
     def __init__(self, pkg):
@@ -298,8 +306,11 @@ if __name__ == '__main__':
     print(releases[-1])
     print(releases[-1].requires_python)
     print(releases[-1].requires_dist)
-
-
+    dep = releases[-1].requires_dist[0]
+    print(dep)
+    dependent_releases = PypiPackageAllVersionView(dep._pkg).releases
+    print(dependent_releases)
+    print(DepConstraint('alabaster>=0.7,<0.8'))
     """
     p = releases[-1]
     print(p.author_info)
