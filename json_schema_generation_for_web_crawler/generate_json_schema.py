@@ -33,11 +33,21 @@ from common.schema_objs import Union
 
 @ray.remote
 class Actor:
-    def get_schema(self, json_batch):
-        print('[get_schema] START')
-        result = Union.set(map(lambda json: fit(json, unify_callback=try_unify_dict), json_batch))
-        print('[get_schema] DONE')
+    def func(self, func, input_data):
+        result = func(input_data)
         return result
+
+class RayActorPoolExecutor:
+    def __init__(self, max_workers=None):
+        assert max_workers is not None, 'Please provide max workers count'
+        self.actor_pool = ActorPool([Actor.remote()] * max_workers)
+
+    def map(self, func, input_generator):
+        return self.actor_pool.map(lambda a, input_data: a.func.remote(func, input_data), input_generator)
+
+
+# result = Union.set(map(lambda json: fit(json, unify_callback=try_unify_dict), json_batch))
+
 
 def get_rough_schema(union_count):
     json_schemas = []
@@ -61,17 +71,16 @@ def get_rough_schema(union_count):
                 batch = []
         yield batch
 
-    actor_pool = ActorPool([Actor.remote(), Actor.remote()])
-
-
+    def get_schema(json_batch):
+        return Union.set(map(lambda json: fit(json, unify_callback=try_unify_dict), json_batch))
 
     with ThreadPoolExecutor(max_workers=union_count if union_count <= 20 else 20) as th_exc:
-        # with ThreadPoolExecutor(max_workers=union_count if union_count <= 10 else 10) as pr_exc:
+        pr_exc = RayActorPoolExecutor(max_workers=union_count if union_count <=4 else 4)
         jsons = th_exc.map(get_json, pkgs[:union_count], chunksize=10)
         jsons = tqdm.tqdm(jsons, total=union_count)
         jsons = filter(lambda json: 'info' in json, jsons)
-        json_batches = generate_batch(jsons, batch_size=10)
-        schemas = actor_pool.map(lambda a, json_batch: a.get_schema.remote(json_batch), json_batches)
+        json_batches = generate_batch(jsons, batch_size=100)
+        schemas = pr_exc.map(get_schema, json_batches)
         union_schema = Union.set(schemas)
 
     return union_schema
