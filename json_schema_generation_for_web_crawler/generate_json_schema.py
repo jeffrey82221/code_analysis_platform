@@ -1,7 +1,8 @@
-import requests
-import pprint
-
 """
+A Json schema builder from multiple strutured Json files
+
+NOTE:
+
 What is a structured JSON file?
 
 It is a dictionary with key and elements
@@ -17,19 +18,20 @@ If the element is a `Simple Variables`, it should have fixed type.
 TODO:
 - [X] Build another create_schema with keys of dictionary shown
 - [X] Generate consistet schema to allow multiple json's schema to be merged into a more consistent schema
-- [ ] Convert Schema to a Python DataClass
-    - [ ] A class extract json properties one-by-one
-    - [ ] A class generate overall json content
-- [ ] An adaptor that takes json as input and initialize the python DataClass
+- [X] Convert Schema to a Python DataClass
+    - [X] A class extract json properties one-by-one
+    - [X] A class generate overall json content
+- [X] An adaptor that takes json as input and initialize the python DataClass
 """
+import requests
 from common.schema_fitter import fit, try_unify_dict
 from common.schema_objs import Union
-if __name__ == '__main__':
+def get_rough_schema(union_count):
     json_schemas = []
     with open('../pypi_graph_analysis/package_names.txt', 'r') as f:
         for i, pkg in enumerate(f):
             pkg = pkg.strip()
-            if i > 1000:
+            if i > union_count:
                 break
             url = f'https://pypi.org/pypi/{pkg}/json'
             print(url)
@@ -37,4 +39,4 @@ if __name__ == '__main__':
             if 'info' in json:
                 json_schemas.append(fit(json, unify_callback=try_unify_dict))
     union_schema = Union.set(json_schemas)
-    pprint.pprint(union_schema)
+    return union_schema

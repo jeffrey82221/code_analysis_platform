@@ -158,16 +158,19 @@ class OverView:
     properties over multiple Json(s)
     """
 
-    def __init__(self, _class: SingleView, inputs: typing.List[typing.Tuple]):
-        self.views = [_class(*arg) for arg in inputs]
-        with concurrent.futures.ThreadPoolExecutor(max_workers=48) as executor:
-            self.schema = Union.set(
-                tqdm.tqdm(
-                    executor.map(
-                        lambda v: v.schema,
-                        self.views,
-                        chunksize=100),
-                    total=len(inputs)))
+    def __init__(self, _class: SingleView, inputs: typing.List[typing.Tuple], schema: JsonSchema = None):
+        self.views = [_class(*arg, schema=schema) for arg in inputs]
+        if schema is not None:
+            self.schema = schema
+        else:
+            with concurrent.futures.ThreadPoolExecutor(max_workers=48) as executor:
+                self.schema = Union.set(
+                    tqdm.tqdm(
+                        executor.map(
+                            lambda v: v.schema,
+                            self.views,
+                            chunksize=100),
+                        total=len(inputs)))
         self.method_keys = reduce(
             lambda a, b: a | b, map(
                 lambda v: set(
