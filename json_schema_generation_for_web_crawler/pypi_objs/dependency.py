@@ -52,7 +52,7 @@ class Dependency:
         def get_result(v):
             return Release(self._pkg, v._ver_id, schema=self._schema)
 
-        with ThreadPoolExecutor(max_workers=16) as executor:
+        with ThreadPoolExecutor(max_workers=len(self._depend_versions)) as executor:
             return list(executor.map(
                 get_result, self._depend_versions, chunksize=1))
 

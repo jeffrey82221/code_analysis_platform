@@ -24,19 +24,32 @@ TODO:
 - [X] An adaptor that takes json as input and initialize the python DataClass
 """
 import requests
+from concurrent.futures import ThreadPoolExecutor, ProcessPoolExecutor
+import tqdm
 from common.schema_fitter import fit, try_unify_dict
 from common.schema_objs import Union
 def get_rough_schema(union_count):
     json_schemas = []
+    pkgs = []
     with open('../pypi_graph_analysis/package_names.txt', 'r') as f:
-        for i, pkg in enumerate(f):
-            pkg = pkg.strip()
-            if i > union_count:
-                break
-            url = f'https://pypi.org/pypi/{pkg}/json'
-            print(url)
-            json = requests.get(url).json()
-            if 'info' in json:
-                json_schemas.append(fit(json, unify_callback=try_unify_dict))
-    union_schema = Union.set(json_schemas)
+        pkgs = list(map(lambda p: p.strip(), f))
+    print('total package count:', len(pkgs))
+    def get_json(pkg):
+        url = f'https://pypi.org/pypi/{pkg}/json'
+        json = requests.get(url).json()
+        return json
+    def get_schema(json):
+        return fit(json, unify_callback=try_unify_dict)
+
+    with ThreadPoolExecutor(max_workers=union_count if union_count <= 20 else 20) as th_exc:
+        with ThreadPoolExecutor(max_workers=union_count if union_count <= 20 else 20) as pr_exc:
+            jsons = th_exc.map(get_json, pkgs[:union_count], chunksize=10)
+            jsons = tqdm.tqdm(jsons, total=union_count)
+            jsons = filter(lambda json: 'info' in json, jsons)
+            # make json batches
+            # get_schema from batches
+            # get_schema from result of batches
+            schemas = pr_exc.map(get_schema, jsons, chunksize=10)
+            union_schema = Union.set(schemas)
+
     return union_schema

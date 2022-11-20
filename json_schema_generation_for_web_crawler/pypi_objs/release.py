@@ -64,7 +64,7 @@ class Release(SingleView):
             dep = Dependency(con_str, schema=self._schema)
             return dep, dep.depend_releases
         dep_constraints = self.methods[('info', 'requires_dist')]()
-        with ThreadPoolExecutor(max_workers=32) as executor:
+        with ThreadPoolExecutor(max_workers=len(dep_constraints)) as executor:
             result = list(executor.map(get_result, dep_constraints, chunksize=1))
         return dict(result)
 
@@ -117,5 +117,5 @@ class Releases(OverView):
         def get_result(v):
             return Release(self._pkg, v._ver_id, schema=self._schema)
 
-        with ThreadPoolExecutor(max_workers=8) as executor:
+        with ThreadPoolExecutor(max_workers=len(self.versions)) as executor:
             return list(executor.map(get_result, self.versions, chunksize=1))
