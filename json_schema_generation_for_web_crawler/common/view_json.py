@@ -16,13 +16,15 @@ import copy
 import tqdm
 import concurrent
 from functools import reduce
-from redis_decorators import RedisCaching
+from redis_dec import Cache
+from redis import StrictRedis
 from . import schema_fitter
 from .schema_objs import Dict, List, UniformDict, Union, Simple, Optional, Unknown, JsonSchema
 
 __all__ = ['SingleView', 'OverView']
 
-caching = RedisCaching('redis://localhost:6379')
+redis = StrictRedis(port=9001, decode_responses=True)
+cache = Cache(redis)
 
 
 class hashabledict(dict):
@@ -133,12 +135,12 @@ class SingleView:
 
     @property
     def json(self):
-        return json.loads(self.call_json_text(self.url))
+        return self.call_json(self.url)
 
-    @caching.cache_string()
-    def call_json_text(self, url):
-        txt = requests.get(url).text
-        return txt
+    @cache.dict(86400)
+    def call_json(self, url):
+        result = requests.get(url).json()
+        return result
 
     def _get_items(self, keys: typing.List[str]):
         result_json = self.json

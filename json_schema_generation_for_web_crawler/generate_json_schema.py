@@ -22,6 +22,8 @@ TODO:
     - [X] A class extract json properties one-by-one
     - [X] A class generate overall json content
 - [X] An adaptor that takes json as input and initialize the python DataClass
+
+- [ ] Change redis-server cache to another one
 """
 import requests
 from concurrent.futures import ThreadPoolExecutor
@@ -30,6 +32,9 @@ import ray
 from ray.util import ActorPool
 from common.schema_fitter import fit, try_unify_dict
 from common.schema_objs import Union
+import time
+from filecache import filecache, DAY
+
 
 @ray.remote
 class Actor:
@@ -38,24 +43,18 @@ class Actor:
         return result
 
 class RayActorPoolExecutor:
-
     def __init__(self, max_workers=None):
         assert max_workers is not None, 'Please provide max workers count'
         self.actor_pool = ActorPool([Actor.remote()] * max_workers)
-
     def map(self, func, input_generator):
         return self.actor_pool.map_unordered(lambda a, input_data: a.func.remote(func, input_data), input_generator)
-
     def __enter__(self):
         return self
-
     def __exit__(self, type, value, tb):
         print('RayActorPoolExecutor closed')
         while self.actor_pool.has_free():
             idle_actor = self.actor_pool.pop_idle()
             idle_actor.__ray_terminate__.remote()
-
-# result = Union.set(map(lambda json: fit(json, unify_callback=try_unify_dict), json_batch))
 
 
 def get_rough_schema(union_count):
@@ -67,20 +66,23 @@ def get_rough_schema(union_count):
 
 
     with ThreadPoolExecutor(max_workers=union_count if union_count <= 20 else 20) as th_exc:
-        with RayActorPoolExecutor(max_workers=union_count if union_count <=4 else 4) as pr_exc:
-            jsons = th_exc.map(_get_json, pkgs[:union_count], chunksize=10)
-            jsons = tqdm.tqdm(jsons, total=union_count)
-            jsons = filter(lambda json: 'info' in json, jsons)
-            json_batches = batchwise_generator(jsons, batch_size=100)
-            schemas = pr_exc.map(_get_schema, json_batches)
-            union_schema = Union.set(schemas)
+        jsons = th_exc.map(_get_json, pkgs[:union_count], chunksize=10)
+        jsons = tqdm.tqdm(jsons, total=union_count)
+        jsons = list(filter(lambda js: 'info' in js, jsons))
+    time.sleep(1)
+    with RayActorPoolExecutor(max_workers=union_count if union_count <=4 else 4) as pr_exc:
+        jsons_gen = tqdm.tqdm(jsons, total=len(jsons))
+        json_batches = batchwise_generator(jsons_gen, batch_size=1000)
+        schemas = pr_exc.map(_get_schema, json_batches)
+        union_schema = Union.set(schemas)
 
     return union_schema
 
+@filecache(DAY)
 def _get_json(pkg):
     url = f'https://pypi.org/pypi/{pkg}/json'
-    json = requests.get(url).json()
-    return json
+    result = requests.get(url).json()
+    return result
 
 
 def batchwise_generator(gen, batch_size=100):
@@ -94,4 +96,4 @@ def batchwise_generator(gen, batch_size=100):
     yield batch
 
 def _get_schema(json_batch):
-    return Union.set(map(lambda json: fit(json, unify_callback=try_unify_dict), json_batch))
+    return Union.set(map(lambda js: fit(js, unify_callback=try_unify_dict), json_batch))
