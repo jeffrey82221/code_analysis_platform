@@ -38,13 +38,22 @@ class Actor:
         return result
 
 class RayActorPoolExecutor:
+
     def __init__(self, max_workers=None):
         assert max_workers is not None, 'Please provide max workers count'
         self.actor_pool = ActorPool([Actor.remote()] * max_workers)
 
     def map(self, func, input_generator):
-        return self.actor_pool.map(lambda a, input_data: a.func.remote(func, input_data), input_generator)
+        return self.actor_pool.map_unordered(lambda a, input_data: a.func.remote(func, input_data), input_generator)
 
+    def __enter__(self):
+        return self
+
+    def __exit__(self, type, value, tb):
+        print('RayActorPoolExecutor closed')
+        while self.actor_pool.has_free():
+            idle_actor = self.actor_pool.pop_idle()
+            idle_actor.__ray_terminate__.remote()
 
 # result = Union.set(map(lambda json: fit(json, unify_callback=try_unify_dict), json_batch))
 
@@ -55,32 +64,34 @@ def get_rough_schema(union_count):
     with open('../pypi_graph_analysis/package_names.txt', 'r') as f:
         pkgs = list(map(lambda p: p.strip(), f))
     print('total package count:', len(pkgs))
-    def get_json(pkg):
-        url = f'https://pypi.org/pypi/{pkg}/json'
-        json = requests.get(url).json()
-        return json
 
-
-    def generate_batch(gen, batch_size=100):
-        batch = []
-        for i, element in enumerate(gen):
-            batch.append(element)
-            if i % batch_size == (batch_size-1):
-                yield batch
-                del batch
-                batch = []
-        yield batch
-
-    def get_schema(json_batch):
-        return Union.set(map(lambda json: fit(json, unify_callback=try_unify_dict), json_batch))
 
     with ThreadPoolExecutor(max_workers=union_count if union_count <= 20 else 20) as th_exc:
-        pr_exc = RayActorPoolExecutor(max_workers=union_count if union_count <=4 else 4)
-        jsons = th_exc.map(get_json, pkgs[:union_count], chunksize=10)
-        jsons = tqdm.tqdm(jsons, total=union_count)
-        jsons = filter(lambda json: 'info' in json, jsons)
-        json_batches = generate_batch(jsons, batch_size=100)
-        schemas = pr_exc.map(get_schema, json_batches)
-        union_schema = Union.set(schemas)
+        with RayActorPoolExecutor(max_workers=union_count if union_count <=4 else 4) as pr_exc:
+            jsons = th_exc.map(_get_json, pkgs[:union_count], chunksize=10)
+            jsons = tqdm.tqdm(jsons, total=union_count)
+            jsons = filter(lambda json: 'info' in json, jsons)
+            json_batches = batchwise_generator(jsons, batch_size=100)
+            schemas = pr_exc.map(_get_schema, json_batches)
+            union_schema = Union.set(schemas)
 
     return union_schema
+
+def _get_json(pkg):
+    url = f'https://pypi.org/pypi/{pkg}/json'
+    json = requests.get(url).json()
+    return json
+
+
+def batchwise_generator(gen, batch_size=100):
+    batch = []
+    for i, element in enumerate(gen):
+        batch.append(element)
+        if i % batch_size == (batch_size-1):
+            yield batch
+            del batch
+            batch = []
+    yield batch
+
+def _get_schema(json_batch):
+    return Union.set(map(lambda json: fit(json, unify_callback=try_unify_dict), json_batch))
