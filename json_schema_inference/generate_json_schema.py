@@ -24,6 +24,15 @@ TODO:
 - [X] An adaptor that takes json as input and initialize the python DataClass
 
 - [ ] Change redis-server cache to another one
+
+
+TODO:
+Use Python Cuckoo Filter to avoid repeat download of json
+
+REF:
+https://github.com/huydhn/cuckoo-filter
+https://dl.acm.org/doi/pdf/10.1145/2674005.2674994
+
 """
 import requests
 from concurrent.futures import ThreadPoolExecutor
@@ -42,14 +51,20 @@ class Actor:
         result = func(input_data)
         return result
 
+
 class RayActorPoolExecutor:
     def __init__(self, max_workers=None):
         assert max_workers is not None, 'Please provide max workers count'
         self.actor_pool = ActorPool([Actor.remote()] * max_workers)
+
     def map(self, func, input_generator):
-        return self.actor_pool.map_unordered(lambda a, input_data: a.func.remote(func, input_data), input_generator)
+        return self.actor_pool.map_unordered(
+            lambda a, input_data: a.func.remote(func, input_data),
+            input_generator)
+
     def __enter__(self):
         return self
+
     def __exit__(self, type, value, tb):
         print('RayActorPoolExecutor closed')
         while self.actor_pool.has_free():
@@ -64,19 +79,19 @@ def get_rough_schema(union_count):
         pkgs = list(map(lambda p: p.strip(), f))
     print('total package count:', len(pkgs))
 
-
     with ThreadPoolExecutor(max_workers=union_count if union_count <= 20 else 20) as th_exc:
         jsons = th_exc.map(_get_json, pkgs[:union_count], chunksize=10)
         jsons = tqdm.tqdm(jsons, total=union_count)
         jsons = list(filter(lambda js: 'info' in js, jsons))
     time.sleep(1)
-    with RayActorPoolExecutor(max_workers=union_count if union_count <=4 else 4) as pr_exc:
+    with RayActorPoolExecutor(max_workers=union_count if union_count <= 4 else 4) as pr_exc:
         jsons_gen = tqdm.tqdm(jsons, total=len(jsons))
         json_batches = batchwise_generator(jsons_gen, batch_size=1000)
         schemas = pr_exc.map(_get_schema, json_batches)
         union_schema = Union.set(schemas)
 
     return union_schema
+
 
 @filecache(DAY)
 def _get_json(pkg):
@@ -89,11 +104,12 @@ def batchwise_generator(gen, batch_size=100):
     batch = []
     for i, element in enumerate(gen):
         batch.append(element)
-        if i % batch_size == (batch_size-1):
+        if i % batch_size == (batch_size - 1):
             yield batch
             del batch
             batch = []
     yield batch
+
 
 def _get_schema(json_batch):
     return Union.set(map(lambda js: fit(js, unify_callback=try_unify_dict), json_batch))
