@@ -45,7 +45,19 @@ import time
 
 
 def get_rough_schema(union_count):
-    json_schemas = []
+    """
+    A pipeline for inferencing json schema from a
+    list of urls
+
+    Pipeline components:
+    - [ ] pkg name generator
+    - [ ] package name cuckoo filter (* saved)
+    - [ ] url generator + pkg name passing
+    - [ ] json generator + pkg name passing (* IO bound)
+    - [ ] json batch aggregator + pkg batch passing
+    - [ ] json schema generator + pkg batch passing (* CPU bound)
+    - [ ] json schema reducer + cuckoo contain deletion
+    """
     pkgs = []
     with open('../pypi_graph_analysis/package_names.txt', 'r') as f:
         pkgs = list(map(lambda p: p.strip(), f))
