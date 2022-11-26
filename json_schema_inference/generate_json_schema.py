@@ -37,39 +37,11 @@ https://dl.acm.org/doi/pdf/10.1145/2674005.2674994
 import requests
 from concurrent.futures import ThreadPoolExecutor
 import tqdm
-import ray
-from ray.util import ActorPool
+
 from common.schema_fitter import fit, try_unify_dict
 from common.schema_objs import Union
+from common.ray_pool_executor import RayActorPoolExecutor
 import time
-from filecache import filecache, DAY
-
-
-@ray.remote
-class Actor:
-    def func(self, func, input_data):
-        result = func(input_data)
-        return result
-
-
-class RayActorPoolExecutor:
-    def __init__(self, max_workers=None):
-        assert max_workers is not None, 'Please provide max workers count'
-        self.actor_pool = ActorPool([Actor.remote()] * max_workers)
-
-    def map(self, func, input_generator):
-        return self.actor_pool.map_unordered(
-            lambda a, input_data: a.func.remote(func, input_data),
-            input_generator)
-
-    def __enter__(self):
-        return self
-
-    def __exit__(self, type, value, tb):
-        print('RayActorPoolExecutor closed')
-        while self.actor_pool.has_free():
-            idle_actor = self.actor_pool.pop_idle()
-            idle_actor.__ray_terminate__.remote()
 
 
 def get_rough_schema(union_count):
@@ -93,7 +65,6 @@ def get_rough_schema(union_count):
     return union_schema
 
 
-@filecache(DAY)
 def _get_json(pkg):
     url = f'https://pypi.org/pypi/{pkg}/json'
     result = requests.get(url).json()
