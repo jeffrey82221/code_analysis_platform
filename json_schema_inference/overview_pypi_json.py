@@ -27,9 +27,10 @@ TODO:
         - [ ] Add python package nodes
         - [ ] Add dependency condition
 """
-from pypi_objs.release import Releases, Release
+from pypi_objs.release import Releases
 from generate_json_schema import get_rough_schema
 import pprint
+
 
 
 if __name__ == '__main__':

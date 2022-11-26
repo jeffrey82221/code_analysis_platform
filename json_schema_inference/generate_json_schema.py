@@ -42,7 +42,6 @@ import tqdm
 from common.schema_fitter import fit, try_unify_dict
 from common.schema_objs import Union, JsonSchema
 from common.ray_pool_executor import RayActorPoolExecutor
-import time
 import os
 import pickle
 import math
@@ -50,7 +49,6 @@ from cuckoo.filter import CuckooFilter
 import logging
 import signal
 import sys
-
 
 def build_pkg_name_generator():
     with open('../pypi_graph_analysis/package_names.txt', 'r') as f:
@@ -215,13 +213,13 @@ def get_rough_schema(union_count):
     - [X] json schema generator + pkg batch passing (* CPU bound)
     - [X] json schema reducer + cuckoo contain deletion (* saved and load via pickle)
     """
-    api_thread_cnt = 20
-    union_worker_cnt = 1
+    api_thread_cnt = 40
+    union_worker_cnt = 8
     batch_size = 10
     pkg_filter = PackageCuckooFilter(build_pkg_name_generator)
     schema_holder = SchemaReducer(pkg_filter)
     pkgs = list(build_pkg_name_generator())
-    pkg_name_pipe = pkgs[:3000]
+    pkg_name_pipe = pkgs
     with ThreadPoolExecutor(max_workers=api_thread_cnt) as th_exc:
         with RayActorPoolExecutor(max_workers=union_worker_cnt) as pr_exc:
             register_graceful_exist([pkg_filter, schema_holder, pr_exc])
