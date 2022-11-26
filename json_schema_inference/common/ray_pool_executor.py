@@ -32,7 +32,7 @@ class RayActorPoolExecutor:
 
     def map(self, func, input_generator):
         if self._max_workers > 1:
-            return self.actor_pool.map_unordered(
+            return self.actor_pool.map(
                 lambda a, input_data: a.func.remote(func, input_data),
                 input_generator)
         else:

@@ -36,12 +36,14 @@ https://dl.acm.org/doi/pdf/10.1145/2674005.2674994
 """
 import typing
 import requests
-from concurrent.futures import ThreadPoolExecutor
+from multiprocessing.pool import ThreadPool
 import tqdm
 
 from common.schema_fitter import fit, try_unify_dict
 from common.schema_objs import Union, JsonSchema
-from common.ray_pool_executor import RayActorPoolExecutor
+# from common.ray_pool_executor import RayActorPoolExecutor
+from ray.util.multiprocessing import Pool
+
 import os
 import pickle
 import math
@@ -214,17 +216,17 @@ def get_rough_schema(union_count):
     - [X] json schema generator + pkg batch passing (* CPU bound)
     - [X] json schema reducer + cuckoo contain deletion (* saved and load via pickle)
     """
-    api_thread_cnt = 40
+    api_thread_cnt = 30
     union_worker_cnt = 8
-    batch_size = 10
+    batch_size = 100
     pkg_filter = PackageCuckooFilter(build_pkg_name_generator)
     schema_holder = SchemaReducer(pkg_filter)
-    pkgs = list(build_pkg_name_generator())
-    pkg_name_pipe = pkgs
-    with ThreadPoolExecutor(max_workers=api_thread_cnt) as th_exc:
-        with RayActorPoolExecutor(max_workers=union_worker_cnt) as pr_exc:
-            register_graceful_exist([pkg_filter, schema_holder, pr_exc])
-            pkg_name_pipe = pkg_filter.filter(pkg_name_pipe)
+    register_graceful_exist([pkg_filter, schema_holder])
+    pkgs = list(pkg_filter.filter(build_pkg_name_generator()))
+    with ThreadPool(processes=api_thread_cnt) as th_exc:
+        with Pool(processes=union_worker_cnt) as pr_exc:
+            
+            pkg_name_pipe = tqdm.tqdm(pkgs, desc='in-dkg-flow')
             url_pkg_name_pipe = map(
                 lambda pkg: (
                     get_url(pkg),
@@ -235,7 +237,7 @@ def get_rough_schema(union_count):
                 url, pkg = instance
                 json_result = get_json(url)
                 return json_result, pkg
-            json_pkg_name_pipe = th_exc.map(th_run, url_pkg_name_pipe)
+            json_pkg_name_pipe = tqdm.tqdm(th_exc.imap_unordered(th_run, url_pkg_name_pipe), total=len(pkgs), desc='json-flow')
             json_pkg_name_pipe = filter(
                 lambda x: 'info' in x[0], json_pkg_name_pipe)
 
@@ -248,11 +250,12 @@ def get_rough_schema(union_count):
                     map(lambda x: x[0], json_pkg_name_batch))
                 return json_schema, pkg_name_batch
 
-            json_schema_pkgs_pipe = pr_exc.map(
+            json_schema_pkgs_pipe = pr_exc.imap_unordered(
                 pr_run, json_pkg_name_batch_pipe)
+            
             json_schema_pkgs_pipe = tqdm.tqdm(
                 json_schema_pkgs_pipe, total=round(
-                    len(pkgs) / batch_size))
+                    len(pkgs) / batch_size), desc='schema-batch-flow')
             schema_holder.reduce(json_schema_pkgs_pipe)
 
     schema_holder.save()
