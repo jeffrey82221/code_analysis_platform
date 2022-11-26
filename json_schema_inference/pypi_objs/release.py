@@ -12,7 +12,6 @@ from .package import Package
 __all__ = ['Release', 'Releases']
 
 
-
 class Release(SingleView):
     def __init__(self, pkg, version, schema=None):
         self._pkg = pkg
@@ -60,12 +59,17 @@ class Release(SingleView):
     @property
     def requires_dist(self):
         from .dependency import Dependency
+
         def get_result(con_str):
             dep = Dependency(con_str, schema=self._schema)
             return dep, dep.depend_releases
         dep_constraints = self.methods[('info', 'requires_dist')]()
         with ThreadPoolExecutor(max_workers=len(dep_constraints)) as executor:
-            result = list(executor.map(get_result, dep_constraints, chunksize=1))
+            result = list(
+                executor.map(
+                    get_result,
+                    dep_constraints,
+                    chunksize=1))
         return dict(result)
 
     @property
@@ -93,6 +97,7 @@ class Release(SingleView):
     @property
     def summary(self):
         return self.methods[('info', 'summary')]()
+
 
 class Releases(OverView):
     def __init__(self, pkg, schema=None):

@@ -81,7 +81,8 @@ def batchwise_generator(gen, batch_size=100):
 
 
 def get_schema(json_batch):
-    return Union.set(map(lambda js: fit(js, unify_callback=try_unify_dict), json_batch))
+    return Union.set(
+        map(lambda js: fit(js, unify_callback=try_unify_dict), json_batch))
 
 
 class PackageCuckooFilter:
@@ -91,7 +92,8 @@ class PackageCuckooFilter:
     final union json schema
     """
 
-    def __init__(self, pkg_gen_builder=typing.Callable[[], typing.Iterable], dump_file_path='pkg_cuckoo.pickle', error_rate: float= 0.01):
+    def __init__(self, pkg_gen_builder=typing.Callable[[
+    ], typing.Iterable], dump_file_path='pkg_cuckoo.pickle', error_rate: float = 0.01):
         self._dump_file_path = dump_file_path
         if os.path.exists(self._dump_file_path):
             self._cuckoo = self.load()
@@ -111,7 +113,9 @@ class PackageCuckooFilter:
                 alpha = 0.98
             capacity = round(len(pkgs) / alpha)
             logging.info('capacity of cuckoo filter:', capacity)
-            logging.info('false positive error rate of cuckoo filter:', error_rate)
+            logging.info(
+                'false positive error rate of cuckoo filter:',
+                error_rate)
             logging.info('bucket size of cuckoo filter:', bucket_size)
             self._cuckoo = CuckooFilter(
                 capacity=capacity,
@@ -145,7 +149,8 @@ class PackageCuckooFilter:
 
 
 class SchemaReducer:
-    def __init__(self, pkg_cuckoo_filter: PackageCuckooFilter, dump_file_path='schema.pickle'):
+    def __init__(self, pkg_cuckoo_filter: PackageCuckooFilter,
+                 dump_file_path='schema.pickle'):
         self._pkg_cuckoo_filter = pkg_cuckoo_filter
         self._dump_file_path = dump_file_path
         if os.path.exists(self._dump_file_path):
@@ -153,7 +158,8 @@ class SchemaReducer:
         else:
             self._current_schema = None
 
-    def reduce(self, schema_pkgs_gen: typing.Iterable[typing.Tuple[JsonSchema, typing.List[str]]]):
+    def reduce(
+            self, schema_pkgs_gen: typing.Iterable[typing.Tuple[JsonSchema, typing.List[str]]]):
         for schema, pkgs in schema_pkgs_gen:
             for pkg in pkgs:
                 self._pkg_cuckoo_filter.remove_pkg(pkg)
@@ -170,7 +176,10 @@ class SchemaReducer:
 
     def save(self):
         with open(self._dump_file_path, 'wb') as handle:
-            pickle.dump(self._current_schema, handle, protocol=pickle.HIGHEST_PROTOCOL)
+            pickle.dump(
+                self._current_schema,
+                handle,
+                protocol=pickle.HIGHEST_PROTOCOL)
         logging.info(self._dump_file_path, 'Saved')
 
     def exit_gracefully(self, *args):
@@ -217,24 +226,34 @@ def get_rough_schema(union_count):
         with RayActorPoolExecutor(max_workers=union_worker_cnt) as pr_exc:
             register_graceful_exist([pkg_filter, schema_holder, pr_exc])
             pkg_name_pipe = pkg_filter.filter(pkg_name_pipe)
-            url_pkg_name_pipe = map(lambda pkg: (get_url(pkg), pkg), pkg_name_pipe)
+            url_pkg_name_pipe = map(
+                lambda pkg: (
+                    get_url(pkg),
+                    pkg),
+                pkg_name_pipe)
 
             def th_run(instance):
                 url, pkg = instance
                 json_result = get_json(url)
                 return json_result, pkg
             json_pkg_name_pipe = th_exc.map(th_run, url_pkg_name_pipe)
-            json_pkg_name_pipe = filter(lambda x: 'info' in x[0], json_pkg_name_pipe)
+            json_pkg_name_pipe = filter(
+                lambda x: 'info' in x[0], json_pkg_name_pipe)
 
-            json_pkg_name_batch_pipe = batchwise_generator(json_pkg_name_pipe, batch_size=batch_size)
+            json_pkg_name_batch_pipe = batchwise_generator(
+                json_pkg_name_pipe, batch_size=batch_size)
 
             def pr_run(json_pkg_name_batch):
                 pkg_name_batch = list(map(lambda x: x[1], json_pkg_name_batch))
-                json_schema = get_schema(map(lambda x: x[0], json_pkg_name_batch))
+                json_schema = get_schema(
+                    map(lambda x: x[0], json_pkg_name_batch))
                 return json_schema, pkg_name_batch
 
-            json_schema_pkgs_pipe = pr_exc.map(pr_run, json_pkg_name_batch_pipe)
-            json_schema_pkgs_pipe = tqdm.tqdm(json_schema_pkgs_pipe, total=round(len(pkgs) / batch_size))
+            json_schema_pkgs_pipe = pr_exc.map(
+                pr_run, json_pkg_name_batch_pipe)
+            json_schema_pkgs_pipe = tqdm.tqdm(
+                json_schema_pkgs_pipe, total=round(
+                    len(pkgs) / batch_size))
             schema_holder.reduce(json_schema_pkgs_pipe)
 
     schema_holder.save()

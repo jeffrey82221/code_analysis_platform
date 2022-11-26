@@ -8,6 +8,7 @@ from bs4 import BeautifulSoup
 
 __all__ = ['Version', 'PythonVersion', 'PY_VERS', 'Constraint']
 
+
 class Version:
     def __init__(self, ver_id: str):
         self._ver_id = ver_id

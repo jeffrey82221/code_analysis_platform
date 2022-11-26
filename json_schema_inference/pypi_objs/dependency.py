@@ -7,6 +7,7 @@ from concurrent.futures import ThreadPoolExecutor
 from .version import Version, Constraint
 from .release import Release, Releases
 
+
 class Dependency:
     """
     Hyperedge linked to

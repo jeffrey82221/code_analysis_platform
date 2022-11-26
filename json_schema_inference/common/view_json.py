@@ -160,7 +160,8 @@ class OverView:
     properties over multiple Json(s)
     """
 
-    def __init__(self, _class: SingleView, inputs: typing.List[typing.Tuple], schema: JsonSchema = None):
+    def __init__(self, _class: SingleView,
+                 inputs: typing.List[typing.Tuple], schema: JsonSchema = None):
         self.views = [_class(*arg, schema=schema) for arg in inputs]
         if schema is not None:
             self.schema = schema
