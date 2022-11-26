@@ -1,3 +1,4 @@
+*.pickle
 *.json
 # *.csv
 .DS_Store
