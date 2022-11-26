@@ -32,7 +32,6 @@ from generate_json_schema import get_rough_schema
 import pprint
 
 
-
 if __name__ == '__main__':
     schema = get_rough_schema(1000)
     pprint.pprint(schema)

@@ -45,7 +45,7 @@ def main(pkg, verbose=False):
 if __name__ == '__main__':
     try:
         verbose = (sys.argv[2] == '1')
-    except:
+    except BaseException:
         verbose = False
     print('verbose:', verbose)
     deps = main(sys.argv[1], verbose=verbose)

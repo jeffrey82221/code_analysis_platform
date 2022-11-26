@@ -50,6 +50,7 @@ import logging
 import signal
 import sys
 
+
 def build_pkg_name_generator():
     with open('../pypi_graph_analysis/package_names.txt', 'r') as f:
         for pkg in map(lambda p: p.strip(), f):
