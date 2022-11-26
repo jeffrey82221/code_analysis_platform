@@ -2,6 +2,17 @@
 
 Holds the useful packages found via the this repo. The reason I put a package here is simply because it might benefit my own work or my life. 
 
+# Outline:
+- To-Study List: interesting list of packages that needs to be investigated. 
+- General Purpose Packages: Some non-machine learning but useful packages 
+- Scapper: Packages wrapping some API services into python API. 
+- UI package: packages supporting user interface development via python 
+- Machine Learning packages of different paradigm 
+
+# TO-Study List: 
+- scalable-cuckoo-filter
+- pybloomfiltermmap3
+
 
 # General Purpose Packages 
 
