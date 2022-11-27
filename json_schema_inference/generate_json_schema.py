@@ -23,27 +23,17 @@ TODO:
     - [X] A class generate overall json content
 - [X] An adaptor that takes json as input and initialize the python DataClass
 
-- [ ] Change redis-server cache to another one
+- [-] Change redis-server cache to another one
 
 
 TODO:
-Use Python Cuckoo Filter to avoid repeat download of json
+- [X] Use Python Cuckoo Filter to avoid repeat download of json
 
 REF:
 https://github.com/huydhn/cuckoo-filter
 https://dl.acm.org/doi/pdf/10.1145/2674005.2674994
 
 """
-import typing
-import requests
-from multiprocessing.pool import ThreadPool
-import tqdm
-
-from common.schema_fitter import fit, try_unify_dict
-from common.schema_objs import Union, JsonSchema
-# from common.ray_pool_executor import RayActorPoolExecutor
-from ray.util.multiprocessing import Pool
-
 import os
 import pickle
 import math
@@ -51,56 +41,34 @@ from cuckoo.filter import CuckooFilter
 import logging
 import signal
 import sys
+import typing
+import requests
+import tqdm
+from multiprocessing.pool import ThreadPool
+from ray.util.multiprocessing import Pool
+from common.schema_fitter import fit, try_unify_dict
+from common.schema_objs import Union, JsonSchema
 
 
-def build_pkg_name_generator():
-    with open('../pypi_graph_analysis/package_names.txt', 'r') as f:
-        for pkg in map(lambda p: p.strip(), f):
-            yield pkg
+__all__ = ['InferenceEngine']
 
 
-def get_url(pkg):
-    url = f'https://pypi.org/pypi/{pkg}/json'
-    return url
 
-
-def get_json(url):
-    result = requests.get(url).json()
-    return result
-
-
-def batchwise_generator(gen, batch_size=100):
-    batch = []
-    for i, element in enumerate(gen):
-        batch.append(element)
-        if i % batch_size == (batch_size - 1):
-            yield batch
-            del batch
-            batch = []
-    if batch:
-        yield batch
-
-
-def get_schema(json_batch):
-    return Union.set(
-        map(lambda js: fit(js, unify_callback=try_unify_dict), json_batch))
-
-
-class PackageCuckooFilter:
+class IndexCuckooFilter:
     """
-    filter out packages whose json schema
+    Filter out index whose json schema
     has already been inference and captured into the
     final union json schema
     """
 
-    def __init__(self, pkg_gen_builder=typing.Callable[[
-    ], typing.Iterable], dump_file_path='pkg_cuckoo.pickle', error_rate: float = 0.01):
+    def __init__(self, index_gen_builder=typing.Callable[[
+    ], typing.Iterable], dump_file_path='cuckoo.pickle', error_rate: float = 0.01):
         self._dump_file_path = dump_file_path
         if os.path.exists(self._dump_file_path):
             self._cuckoo = self.load()
         else:
             # build the cuckoo filter from scratch
-            pkgs = list(pkg_gen_builder())
+            indexs = list(index_gen_builder())
             assert error_rate <= 1. and error_rate > 0.
             bucket_size = round(- math.log10(error_rate)) + 1
             # fingerprint_size = int(math.ceil(math.log(1.0 / error_rate, 2) + math.log(2 * bucket_size, 2)))
@@ -112,7 +80,7 @@ class PackageCuckooFilter:
                 alpha = 0.95
             elif bucket_size >= 8:
                 alpha = 0.98
-            capacity = round(len(pkgs) / alpha)
+            capacity = round(len(indexs) / alpha)
             logging.info('capacity of cuckoo filter:', capacity)
             logging.info(
                 'false positive error rate of cuckoo filter:',
@@ -122,16 +90,16 @@ class PackageCuckooFilter:
                 capacity=capacity,
                 error_rate=error_rate,
                 bucket_size=bucket_size)
-            for pkg in pkgs:
-                self._cuckoo.insert(pkg)
+            for index in indexs:
+                self._cuckoo.insert(index)
 
-    def remove_pkg(self, pkg: str):
-        self._cuckoo.delete(pkg)
+    def remove(self, index: str):
+        self._cuckoo.delete(index)
 
-    def filter(self, pkg_gen: typing.Iterable):
-        for pkg in pkg_gen:
-            if self._cuckoo.contains(pkg):
-                yield pkg
+    def filter(self, index_gen: typing.Iterable):
+        for index in index_gen:
+            if self._cuckoo.contains(index):
+                yield index
 
     def load(self):
         with open(self._dump_file_path, 'rb') as handle:
@@ -150,9 +118,17 @@ class PackageCuckooFilter:
 
 
 class SchemaReducer:
-    def __init__(self, pkg_cuckoo_filter: PackageCuckooFilter,
+    """
+    This class reduces the json schemas produced by 
+    the inference_workers. 
+
+    It stored the union schema of the inferenced json schemas 
+    and captured the record the corresponding indices
+    in the IndexCuckooFilter. 
+    """
+    def __init__(self, cuckoo_filter: IndexCuckooFilter,
                  dump_file_path='schema.pickle'):
-        self._pkg_cuckoo_filter = pkg_cuckoo_filter
+        self._cuckoo_filter = cuckoo_filter
         self._dump_file_path = dump_file_path
         if os.path.exists(self._dump_file_path):
             self._current_schema = self.load()
@@ -160,10 +136,10 @@ class SchemaReducer:
             self._current_schema = None
 
     def reduce(
-            self, schema_pkgs_gen: typing.Iterable[typing.Tuple[JsonSchema, typing.List[str]]]):
-        for schema, pkgs in schema_pkgs_gen:
-            for pkg in pkgs:
-                self._pkg_cuckoo_filter.remove_pkg(pkg)
+            self, schema_indices_producer: typing.Iterable[typing.Tuple[JsonSchema, typing.List[str]]]):
+        for schema, indices in schema_indices_producer:
+            for index in indices:
+                self._cuckoo_filter.remove(index)
             if self._current_schema is not None:
                 self._current_schema |= schema
             else:
@@ -192,79 +168,147 @@ class SchemaReducer:
         return self._current_schema
 
 
-def register_graceful_exist(objs):
-    def do_exit(*args):
-        for p in objs:
-            p.exit_gracefully(*args)
-        sys.exit(1)
-    signal.signal(signal.SIGINT, do_exit)
-    signal.signal(signal.SIGTERM, do_exit)
 
 
-def get_rough_schema():
+class InferenceEngine:
     """
-    A pipeline for inferencing json schema from a
-    list of urls
-
-    Pipeline components:
-    - [X] pkg name generator
-    - [X] package name cuckoo filter (* load from pickle or create from all pkg names)
-    - [X] url generator + pkg name passing
-    - [X] json generator + pkg name passing (* IO bound)
-    - [X] error json filtering
-    - [X] json batch aggregator + pkg batch passing
-    - [X] json schema generator + pkg batch passing (* CPU bound)
-    - [X] json schema reducer + cuckoo contain deletion (* saved and load via pickle)
+    Args:
+        - api_thread_cnt: number of threads downloading json from url 
+        - inference_worker_cnt: number of processes inferencing the json schema
+        - json_per_worker: number of json files an inference worker takes as input
+        - cuckoo_dump: path to a dump file to store the record of processed index 
+        - schema_dump: path to a dump to store the inferenced json schema. 
+    Methods to be overide: 
+        - index_generator: a generator yeilding index (or url) strings referencing to a json file
+        - index_to_url: a function takes the index from index_generator as input and convert it to an url 
+            (If index_generator yeilds url, no need to overide this function.)
+        - is_json_valid: a function takes determine whether a json is valid or not 
+            (The invlid json would be ignored.) 
     """
-    api_thread_cnt = 30
-    union_worker_cnt = 8
-    batch_size = 100
-    pkg_filter = PackageCuckooFilter(build_pkg_name_generator)
-    schema_holder = SchemaReducer(pkg_filter)
-    register_graceful_exist([pkg_filter, schema_holder])
-    pkgs = list(pkg_filter.filter(build_pkg_name_generator()))
-    with ThreadPool(processes=api_thread_cnt) as th_exc:
-        with Pool(processes=union_worker_cnt) as pr_exc:
-            
-            pkg_name_pipe = tqdm.tqdm(pkgs, desc='in-dkg-flow')
-            url_pkg_name_pipe = map(
-                lambda pkg: (
-                    get_url(pkg),
-                    pkg),
-                pkg_name_pipe)
+    def __init__(self, api_thread_cnt=30, inference_worker_cnt=4, json_per_worker=10, cuckoo_dump='cuckoo.pickle', schema_dump='schema.pickle'):
+        self._api_thread_cnt = api_thread_cnt
+        self._inference_worker_cnt = inference_worker_cnt
+        self._json_per_worker = json_per_worker
+        self._index_filter = IndexCuckooFilter(self.index_generator, dump_file_path=cuckoo_dump)
+        self._schema_holder = SchemaReducer(self._index_filter, dump_file_path=schema_dump)
+        self._register_graceful_exist([self._index_filter, self._schema_holder])
+    
+    def _register_graceful_exist(self, objs):
+        def do_exit(*args):
+            for p in objs:
+                p.exit_gracefully(*args)
+            sys.exit(1)
+        signal.signal(signal.SIGINT, do_exit)
+        signal.signal(signal.SIGTERM, do_exit)
 
-            def th_run(instance):
-                url, pkg = instance
-                json_result = get_json(url)
-                return json_result, pkg
-            json_pkg_name_pipe = tqdm.tqdm(th_exc.imap_unordered(th_run, url_pkg_name_pipe), total=len(pkgs), desc='json-flow')
-            # need to filter out pkg that doesn't have query 
-            def remove_pkg_with_errorneous_json(instance):
-                json_result, pkg = instance
-                if 'info' not in json_result:
-                    pkg_filter.remove_pkg(pkg)
-                return json_result, pkg
-            json_pkg_name_pipe = map(remove_pkg_with_errorneous_json, json_pkg_name_pipe)
-            json_pkg_name_pipe = filter(
-                lambda x: 'info' in x[0], json_pkg_name_pipe)
+    
+    def index_generator(self) -> typing.Iterable[str]:
+        with open('../pypi_graph_analysis/package_names.txt', 'r') as f:
+            for pkg in map(lambda p: p.strip(), f):
+                yield pkg
 
-            json_pkg_name_batch_pipe = batchwise_generator(
-                json_pkg_name_pipe, batch_size=batch_size)
+    def get_url(self, pkg):
+        url = f'https://pypi.org/pypi/{pkg}/json'
+        return url
 
-            def pr_run(json_pkg_name_batch):
-                pkg_name_batch = list(map(lambda x: x[1], json_pkg_name_batch))
-                json_schema = get_schema(
-                    map(lambda x: x[0], json_pkg_name_batch))
-                return json_schema, pkg_name_batch
+    def is_valid_json(self, json_dict):
+        return 'info' in json_dict
 
-            json_schema_pkgs_pipe = pr_exc.imap_unordered(
-                pr_run, json_pkg_name_batch_pipe)
-            
-            json_schema_pkgs_pipe = tqdm.tqdm(
-                json_schema_pkgs_pipe, total=round(
-                    len(pkgs) / batch_size), desc='schema-batch-flow')
-            schema_holder.reduce(json_schema_pkgs_pipe)
+    def get_schema(self, verbose=True):
+        """
+        A pipeline for inferencing json schema from a
+        json files generated from url indices. 
+        """
+        # Get indices (ignroe already processed ones)
+        indexs = list(self._index_filter.filter(self.index_generator()))
+        index_name_pipe = indexs
+        with ThreadPool(processes=self._api_thread_cnt) as th_exc:
+            with Pool(processes=self._inference_worker_cnt) as pr_exc:
+                if verbose:
+                    index_name_pipe = tqdm.tqdm(
+                        index_name_pipe, 
+                        desc='in-dkg-flow'
+                    )
+                # Mapping index to URL
+                url_index_name_pipe = map(
+                    lambda index: (
+                        self.get_url(index),
+                        index),
+                    index_name_pipe)
 
-    schema_holder.save()
-    pkg_filter.save()
-    return schema_holder.union_schema
+                # Download Json from URL
+                json_index_name_pipe = th_exc.imap_unordered(InferenceEngine._th_run, url_index_name_pipe)
+                
+                if verbose:
+                    json_index_name_pipe = tqdm.tqdm(
+                        json_index_name_pipe, total=len(indexs), 
+                        desc='json-flow')
+                
+                # Remove errorneous Json
+                json_index_name_pipe = self.filter_errorneous_json(json_index_name_pipe)
+                json_index_name_batch_pipe = InferenceEngine._batchwise_generator(
+                    json_index_name_pipe, batch_size=self._json_per_worker)
+
+                # Inferencing Json schemas from Json Batches
+                json_schema_indexs_pipe = pr_exc.imap_unordered(
+                    InferenceEngine._pr_run, json_index_name_batch_pipe)
+                
+                if verbose:
+                    json_schema_indexs_pipe = tqdm.tqdm(
+                        json_schema_indexs_pipe, total=round(
+                            len(indexs) / self._json_per_worker), 
+                        desc='schema-batch-flow')
+                
+                # Reducing Json Schemas into One Union Json Schema
+                self._schema_holder.reduce(json_schema_indexs_pipe)
+
+        # Saving the final schema and process record as Pickles
+        self._schema_holder.save()
+        self._index_filter.save()
+        return self._schema_holder.union_schema
+
+    @staticmethod
+    def _th_run(instance):
+        url, index = instance
+        json_result = InferenceEngine._get_json(url)
+        return json_result, index
+
+    @staticmethod
+    def _get_json(url):
+        result = requests.get(url).json()
+        return result
+
+    def filter_errorneous_json(self, json_index_name_pipe: typing.Iterable[typing.Tuple[typing.Dict, str]]):
+        def remove_index_of_errorneous_json(instance):
+            json_result, index = instance
+            if not self.is_valid_json(json_result):
+                self._index_filter.remove(index)
+            return json_result, index
+        json_index_name_pipe = map(remove_index_of_errorneous_json, json_index_name_pipe)
+        json_index_name_pipe = filter(
+            lambda x: self.is_valid_json(x[0]), json_index_name_pipe)
+        return json_index_name_pipe
+
+    @staticmethod
+    def _batchwise_generator(gen, batch_size=100):
+        batch = []
+        for i, element in enumerate(gen):
+            batch.append(element)
+            if i % batch_size == (batch_size - 1):
+                yield batch
+                del batch
+                batch = []
+        if batch:
+            yield batch
+
+    @staticmethod
+    def _pr_run(json_index_name_batch: typing.List[typing.Tuple[typing.Dict, str]]):
+        index_name_batch = list(map(lambda x: x[1], json_index_name_batch))
+        json_schema = InferenceEngine._get_schema(
+            map(lambda x: x[0], json_index_name_batch))
+        return json_schema, index_name_batch
+
+    @staticmethod
+    def _get_schema(json_batch):
+        return Union.set(
+            map(lambda js: fit(js, unify_callback=try_unify_dict), json_batch))

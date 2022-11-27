@@ -28,12 +28,13 @@ TODO:
         - [ ] Add dependency condition
 """
 from pypi_objs.release import Releases
-from generate_json_schema import get_rough_schema
+from generate_json_schema import InferenceEngine
 import pprint
 
 
 if __name__ == '__main__':
-    schema = get_rough_schema()
+    inference_engine = InferenceEngine()
+    schema = inference_engine.get_schema()
     pprint.pprint(schema)
     releases = Releases('pandas', schema=schema).releases
     pprint.pprint(releases[-1].requires_dist)
