@@ -34,6 +34,7 @@ https://github.com/huydhn/cuckoo-filter
 https://dl.acm.org/doi/pdf/10.1145/2674005.2674994
 
 """
+import abc
 import os
 import pickle
 import math
@@ -201,18 +202,17 @@ class InferenceEngine:
         signal.signal(signal.SIGINT, do_exit)
         signal.signal(signal.SIGTERM, do_exit)
 
-    
+    @abc.abstractmethod
     def index_generator(self) -> typing.Iterable[str]:
-        with open('../pypi_graph_analysis/package_names.txt', 'r') as f:
-            for pkg in map(lambda p: p.strip(), f):
-                yield pkg
+        raise NotImplementedError
+    
+    @abc.abstractmethod
+    def get_url(self, index: str) -> str:
+        raise NotImplementedError
 
-    def get_url(self, pkg):
-        url = f'https://pypi.org/pypi/{pkg}/json'
-        return url
-
-    def is_valid_json(self, json_dict):
-        return 'info' in json_dict
+    @abc.abstractmethod
+    def is_valid_json(self, json_dict: typing.Dict) -> bool:
+        raise NotImplementedError
 
     def get_schema(self, verbose=True):
         """
