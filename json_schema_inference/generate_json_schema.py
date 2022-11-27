@@ -201,7 +201,7 @@ def register_graceful_exist(objs):
     signal.signal(signal.SIGTERM, do_exit)
 
 
-def get_rough_schema(union_count):
+def get_rough_schema():
     """
     A pipeline for inferencing json schema from a
     list of urls
@@ -238,6 +238,13 @@ def get_rough_schema(union_count):
                 json_result = get_json(url)
                 return json_result, pkg
             json_pkg_name_pipe = tqdm.tqdm(th_exc.imap_unordered(th_run, url_pkg_name_pipe), total=len(pkgs), desc='json-flow')
+            # need to filter out pkg that doesn't have query 
+            def remove_pkg_with_errorneous_json(instance):
+                json_result, pkg = instance
+                if 'info' not in json_result:
+                    pkg_filter.remove_pkg(pkg)
+                return json_result, pkg
+            json_pkg_name_pipe = map(remove_pkg_with_errorneous_json, json_pkg_name_pipe)
             json_pkg_name_pipe = filter(
                 lambda x: 'info' in x[0], json_pkg_name_pipe)
 
