@@ -32,7 +32,6 @@ from pypi_objs.schema import PypiPackageSchemaInferencer
 import pprint
 
 
-
 if __name__ == '__main__':
     inference_engine = PypiPackageSchemaInferencer()
     schema = inference_engine.get_schema()

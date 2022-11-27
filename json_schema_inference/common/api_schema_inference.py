@@ -54,7 +54,6 @@ from .schema_objs import Union, JsonSchema
 __all__ = ['InferenceEngine']
 
 
-
 class IndexCuckooFilter:
     """
     Filter out index whose json schema
@@ -120,13 +119,14 @@ class IndexCuckooFilter:
 
 class SchemaReducer:
     """
-    This class reduces the json schemas produced by 
-    the inference_workers. 
+    This class reduces the json schemas produced by
+    the inference_workers.
 
-    It stored the union schema of the inferenced json schemas 
+    It stored the union schema of the inferenced json schemas
     and captured the record the corresponding indices
-    in the IndexCuckooFilter. 
+    in the IndexCuckooFilter.
     """
+
     def __init__(self, cuckoo_filter: IndexCuckooFilter,
                  dump_file_path='schema.pickle'):
         self._cuckoo_filter = cuckoo_filter
@@ -169,31 +169,34 @@ class SchemaReducer:
         return self._current_schema
 
 
-
-
 class InferenceEngine:
     """
     Args:
-        - api_thread_cnt: number of threads downloading json from url 
+        - api_thread_cnt: number of threads downloading json from url
         - inference_worker_cnt: number of processes inferencing the json schema
         - json_per_worker: number of json files an inference worker takes as input
-        - cuckoo_dump: path to a dump file to store the record of processed index 
-        - schema_dump: path to a dump to store the inferenced json schema. 
-    Methods to be overide: 
+        - cuckoo_dump: path to a dump file to store the record of processed index
+        - schema_dump: path to a dump to store the inferenced json schema.
+    Methods to be overide:
         - index_generator: a generator yeilding index (or url) strings referencing to a json file
-        - index_to_url: a function takes the index from index_generator as input and convert it to an url 
+        - index_to_url: a function takes the index from index_generator as input and convert it to an url
             (If index_generator yeilds url, no need to overide this function.)
-        - is_json_valid: a function takes determine whether a json is valid or not 
-            (The invlid json would be ignored.) 
+        - is_json_valid: a function takes determine whether a json is valid or not
+            (The invlid json would be ignored.)
     """
-    def __init__(self, api_thread_cnt=30, inference_worker_cnt=4, json_per_worker=10, cuckoo_dump='cuckoo.pickle', schema_dump='schema.pickle'):
+
+    def __init__(self, api_thread_cnt=30, inference_worker_cnt=4, json_per_worker=10,
+                 cuckoo_dump='cuckoo.pickle', schema_dump='schema.pickle'):
         self._api_thread_cnt = api_thread_cnt
         self._inference_worker_cnt = inference_worker_cnt
         self._json_per_worker = json_per_worker
-        self._index_filter = IndexCuckooFilter(self.index_generator, dump_file_path=cuckoo_dump)
-        self._schema_holder = SchemaReducer(self._index_filter, dump_file_path=schema_dump)
-        self._register_graceful_exist([self._index_filter, self._schema_holder])
-    
+        self._index_filter = IndexCuckooFilter(
+            self.index_generator, dump_file_path=cuckoo_dump)
+        self._schema_holder = SchemaReducer(
+            self._index_filter, dump_file_path=schema_dump)
+        self._register_graceful_exist(
+            [self._index_filter, self._schema_holder])
+
     def _register_graceful_exist(self, objs):
         def do_exit(*args):
             for p in objs:
@@ -205,7 +208,7 @@ class InferenceEngine:
     @abc.abstractmethod
     def index_generator(self) -> typing.Iterable[str]:
         raise NotImplementedError
-    
+
     @abc.abstractmethod
     def get_url(self, index: str) -> str:
         raise NotImplementedError
@@ -217,7 +220,7 @@ class InferenceEngine:
     def get_schema(self, verbose=True):
         """
         A pipeline for inferencing json schema from a
-        json files generated from url indices. 
+        json files generated from url indices.
         """
         # Get indices (ignroe already processed ones)
         indexs = list(self._index_filter.filter(self.index_generator()))
@@ -226,7 +229,7 @@ class InferenceEngine:
             with Pool(processes=self._inference_worker_cnt) as pr_exc:
                 if verbose:
                     index_name_pipe = tqdm.tqdm(
-                        index_name_pipe, 
+                        index_name_pipe,
                         desc='in-dkg-flow'
                     )
                 # Mapping index to URL
@@ -237,28 +240,30 @@ class InferenceEngine:
                     index_name_pipe)
 
                 # Download Json from URL
-                json_index_name_pipe = th_exc.imap_unordered(InferenceEngine._th_run, url_index_name_pipe)
-                
+                json_index_name_pipe = th_exc.imap_unordered(
+                    InferenceEngine._th_run, url_index_name_pipe)
+
                 if verbose:
                     json_index_name_pipe = tqdm.tqdm(
-                        json_index_name_pipe, total=len(indexs), 
+                        json_index_name_pipe, total=len(indexs),
                         desc='json-flow')
-                
+
                 # Remove errorneous Json
-                json_index_name_pipe = self.filter_errorneous_json(json_index_name_pipe)
+                json_index_name_pipe = self.filter_errorneous_json(
+                    json_index_name_pipe)
                 json_index_name_batch_pipe = InferenceEngine._batchwise_generator(
                     json_index_name_pipe, batch_size=self._json_per_worker)
 
                 # Inferencing Json schemas from Json Batches
                 json_schema_indexs_pipe = pr_exc.imap_unordered(
                     InferenceEngine._pr_run, json_index_name_batch_pipe)
-                
+
                 if verbose:
                     json_schema_indexs_pipe = tqdm.tqdm(
                         json_schema_indexs_pipe, total=round(
-                            len(indexs) / self._json_per_worker), 
+                            len(indexs) / self._json_per_worker),
                         desc='schema-batch-flow')
-                
+
                 # Reducing Json Schemas into One Union Json Schema
                 self._schema_holder.reduce(json_schema_indexs_pipe)
 
@@ -278,13 +283,16 @@ class InferenceEngine:
         result = requests.get(url).json()
         return result
 
-    def filter_errorneous_json(self, json_index_name_pipe: typing.Iterable[typing.Tuple[typing.Dict, str]]):
+    def filter_errorneous_json(
+            self, json_index_name_pipe: typing.Iterable[typing.Tuple[typing.Dict, str]]):
         def remove_index_of_errorneous_json(instance):
             json_result, index = instance
             if not self.is_valid_json(json_result):
                 self._index_filter.remove(index)
             return json_result, index
-        json_index_name_pipe = map(remove_index_of_errorneous_json, json_index_name_pipe)
+        json_index_name_pipe = map(
+            remove_index_of_errorneous_json,
+            json_index_name_pipe)
         json_index_name_pipe = filter(
             lambda x: self.is_valid_json(x[0]), json_index_name_pipe)
         return json_index_name_pipe
@@ -302,7 +310,8 @@ class InferenceEngine:
             yield batch
 
     @staticmethod
-    def _pr_run(json_index_name_batch: typing.List[typing.Tuple[typing.Dict, str]]):
+    def _pr_run(
+            json_index_name_batch: typing.List[typing.Tuple[typing.Dict, str]]):
         index_name_batch = list(map(lambda x: x[1], json_index_name_batch))
         json_schema = InferenceEngine._get_schema(
             map(lambda x: x[0], json_index_name_batch))
