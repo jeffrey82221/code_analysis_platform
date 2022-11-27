@@ -29,7 +29,7 @@ TODO:
 """
 import typing
 from pypi_objs.release import Releases
-from generate_json_schema import InferenceEngine
+from common.api_schema_inference import InferenceEngine
 import pprint
 
 class PypiPackageSchemaInferencer(InferenceEngine):
