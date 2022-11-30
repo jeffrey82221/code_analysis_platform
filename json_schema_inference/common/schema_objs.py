@@ -21,7 +21,7 @@ import abc
 import copy
 import typing
 from functools import reduce
-
+from collections import Counter
 __all__ = [
     'Simple',
     'List',
@@ -213,7 +213,9 @@ class Dict(JsonSchema):
         return hash(tuple(sorted(self._content.items())))
 
     def __or__(self, e):
-        if isinstance(e, Dict):
+        if isinstance(e, DynamicDict):
+            return e | self
+        elif isinstance(e, Dict):
             old = copy.deepcopy(self)
             new = copy.deepcopy(e)
             if old._content.keys() == new._content.keys():
@@ -222,6 +224,7 @@ class Dict(JsonSchema):
                 return old
             else:
                 result_dict = {}
+                key_counter = Counter()
                 for key in set(list(old._content.keys()) +
                                list(new._content.keys())):
                     if key in old._content and key in new._content:
@@ -230,7 +233,11 @@ class Dict(JsonSchema):
                         result_dict[key] = old._content[key]
                     elif key in new._content:
                         result_dict[key] = new._content[key]
-                return DynamicDict(result_dict)
+                for key in old._content.keys():
+                    key_counter[key] += 1
+                for key in new._content.keys():
+                    key_counter[key] += 1
+                return DynamicDict(result_dict, key_counter)
         else:
             return self._base_or(e)
 
@@ -246,12 +253,50 @@ class DynamicDict(Dict):
     (some keys can be optional)
     """
 
-    def __init__(self, content: dict):
+    def __init__(self, content: dict, key_counter):
         super().__init__(content)
+        self._key_counter = key_counter
 
     def __repr__(self):
-        return f'DynamicDict[{self._content}]'
+        content_strs = []
+        for key, cnt in self._key_counter.most_common(10):
+            content_strs.append(f'({key}, {cnt}): {self._content[key]}')
+        content_whole_str = ','.join(content_strs)
+        return f'DynamicDict[{{{content_whole_str},...}}]'
 
+    def __hash__(self):
+        return hash(tuple(sorted(self._content.items()))) + hash(tuple(sorted(self._key_counter.items())))
+
+    def __or__(self, e):
+        result_dict = dict()
+        if isinstance(e, DynamicDict):
+            old = copy.deepcopy(self)
+            new = copy.deepcopy(e)
+            for key in set(list(old._content.keys()) +
+                           list(new._content.keys())):
+                if key in old._content and key in new._content:
+                    result_dict[key] = old._content[key] | new._content[key]
+                elif key in old._content:
+                    result_dict[key] = old._content[key]
+                elif key in new._content:
+                    result_dict[key] = new._content[key]
+            return DynamicDict(result_dict, old._key_counter + new._key_counter)
+        elif isinstance(e, Dict):
+            old = copy.deepcopy(self)
+            new = copy.deepcopy(e)
+            for key in set(list(old._content.keys()) +
+                           list(new._content.keys())):
+                if key in old._content and key in new._content:
+                    result_dict[key] = old._content[key] | new._content[key]
+                elif key in old._content:
+                    result_dict[key] = old._content[key]
+                elif key in new._content:
+                    result_dict[key] = new._content[key]
+            for key in new._content.keys():
+                old._key_counter[key] += 1
+            return DynamicDict(result_dict, old._key_counter)
+        else:
+            return self._base_or(e)
 
 class UniformDict(JsonSchema):
     """
