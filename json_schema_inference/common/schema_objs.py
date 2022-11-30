@@ -9,6 +9,13 @@ TODO:
 - [X] A SchemaFitter that infer Schema from Json(s)
 - [X] Consider empty list in schema objs / fitter
 - [X] Add DynamicDict object to represent dictionary with changing of keys
+- [ ] Add content counting data content to DynamicDict as addition to ._content
+    (
+        1. We can count the occurrence of key.
+        2. We can represent the objects as tuple appearance count.
+            e.g., DynamicDict[{'apple' (120): str, 'banana' (123): str, ..., 'car' (1): str}]
+        3. Allow counter to be added together
+    )
 """
 import abc
 import copy
