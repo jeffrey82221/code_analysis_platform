@@ -27,8 +27,8 @@ TODO:
         - [ ] Add python package nodes
         - [ ] Add dependency condition
 """
-from pypi_objs.release import Releases, Release
-from generate_json_schema import get_rough_schema
+from pypi_objs.release import Releases
+from pypi_objs.schema import PypiPackageSchemaInferencer
 import pprint
 
 

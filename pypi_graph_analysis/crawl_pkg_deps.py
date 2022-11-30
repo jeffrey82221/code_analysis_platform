@@ -26,10 +26,12 @@ def call_n_save_result(pkg):
             json.dump(deps, f)
     return deps
 
+
 def consumer(gen):
     for i, result in enumerate(tqdm(gen, total=cnt)):
         if i % 10000 == 0:
             print(f'{i}th result:', result)
+
 
 with ThreadPoolExecutor(max_workers=8) as executor:
     pkg_names = open('package_names.txt')

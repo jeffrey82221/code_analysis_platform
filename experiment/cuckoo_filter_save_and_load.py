@@ -11,7 +11,10 @@ capacity = 1000000
 error_rate = 0.000001
 
 bucket_size = 6
-cuckoo = CuckooFilter(capacity=capacity, error_rate=error_rate, bucket_size=bucket_size)
+cuckoo = CuckooFilter(
+    capacity=capacity,
+    error_rate=error_rate,
+    bucket_size=bucket_size)
 
 cuckoo.insert('apple')
 

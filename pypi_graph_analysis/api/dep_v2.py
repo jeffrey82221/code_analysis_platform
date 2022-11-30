@@ -1,6 +1,6 @@
 
 """
-Get the import dependency of a package 
+Get the import dependency of a package
 
 pip install pycograph
 
@@ -14,6 +14,8 @@ pip download torch --dest torch
 import os
 import glob
 import sys
+
+
 def main(pkg):
     try:
         os.system(f'mkdir {pkg}')
@@ -23,14 +25,15 @@ def main(pkg):
         file_name = glob.glob(f'{pkg}_unpacked/*/*.dist-info/top_level.txt')[0]
         import_name = open(file_name, 'r').read().strip()
         return import_name
-    except:
+    except BaseException:
         print(f'Package {pkg} not found')
     finally:
         if os.path.exists(pkg):
             os.system(f'rm -r {pkg}')
         if os.path.exists(f'{pkg}_unpacked'):
             os.system(f'rm -r {pkg}_unpacked')
-    
+
+
 if __name__ == '__main__':
     ans = main(sys.argv[1])
     print(ans)
