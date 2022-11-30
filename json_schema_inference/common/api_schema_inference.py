@@ -28,6 +28,7 @@ TODO:
 
 TODO:
 - [X] Use Python Cuckoo Filter to avoid repeat download of json
+- [ ] enable no dump mode
 
 REF:
 https://github.com/huydhn/cuckoo-filter
@@ -46,7 +47,6 @@ import typing
 import requests
 import tqdm
 from multiprocessing.pool import ThreadPool
-from ray.util.multiprocessing import Pool
 from .schema_fitter import fit, try_unify_dict
 from .schema_objs import Union, JsonSchema
 
@@ -189,6 +189,11 @@ class InferenceEngine:
                  cuckoo_dump='cuckoo.pickle', schema_dump='schema.pickle'):
         self._api_thread_cnt = api_thread_cnt
         self._inference_worker_cnt = inference_worker_cnt
+        if self._inference_worker_cnt > 1:
+            from ray.util.multiprocessing import Pool
+            self.Pool = Pool
+        else:
+            self.Pool = ThreadPool
         self._json_per_worker = json_per_worker
         self._index_filter = IndexCuckooFilter(
             self.index_generator, dump_file_path=cuckoo_dump)
@@ -226,7 +231,7 @@ class InferenceEngine:
         indexs = list(self._index_filter.filter(self.index_generator()))
         index_name_pipe = indexs
         with ThreadPool(processes=self._api_thread_cnt) as th_exc:
-            with Pool(processes=self._inference_worker_cnt) as pr_exc:
+            with self.Pool(processes=self._inference_worker_cnt) as pr_exc:
                 if verbose:
                     index_name_pipe = tqdm.tqdm(
                         index_name_pipe,
