@@ -104,7 +104,7 @@ class IndexCuckooFilter:
     def load(self):
         with open(self._dump_file_path, 'rb') as handle:
             result = pickle.load(handle)
-        logging.info(self._dump_file_path, 'Loaded')
+        print(f'{self._dump_file_path} Loaded')
         return result
 
     def exit_gracefully(self, *args):
@@ -114,7 +114,7 @@ class IndexCuckooFilter:
     def save(self):
         with open(self._dump_file_path, 'wb') as handle:
             pickle.dump(self._cuckoo, handle, protocol=pickle.HIGHEST_PROTOCOL)
-        logging.info(self._dump_file_path, 'Saved')
+        print(f'{self._dump_file_path} Saved')
 
 
 class SchemaReducer:
@@ -149,7 +149,7 @@ class SchemaReducer:
     def load(self):
         with open(self._dump_file_path, 'rb') as handle:
             result = pickle.load(handle)
-        logging.info(self._dump_file_path, 'Loaded')
+        print(f'{self._dump_file_path} Loaded')
         return result
 
     def save(self):
@@ -158,7 +158,7 @@ class SchemaReducer:
                 self._current_schema,
                 handle,
                 protocol=pickle.HIGHEST_PROTOCOL)
-        logging.info(self._dump_file_path, 'Saved')
+        print(f'{self._dump_file_path} Saved')
 
     def exit_gracefully(self, *args):
         self.save()
@@ -230,52 +230,56 @@ class InferenceEngine:
         # Get indices (ignroe already processed ones)
         indexs = list(self._index_filter.filter(self.index_generator()))
         index_name_pipe = indexs
-        with ThreadPool(processes=self._api_thread_cnt) as th_exc:
-            with self.Pool(processes=self._inference_worker_cnt) as pr_exc:
-                if verbose:
-                    index_name_pipe = tqdm.tqdm(
-                        index_name_pipe,
-                        desc='in-dkg-flow'
-                    )
-                # Mapping index to URL
-                url_index_name_pipe = map(
-                    lambda index: (
-                        self.get_url(index),
-                        index),
-                    index_name_pipe)
+        try:
+            with ThreadPool(processes=self._api_thread_cnt) as th_exc:
+                with self.Pool(processes=self._inference_worker_cnt) as pr_exc:
+                    if verbose:
+                        index_name_pipe = tqdm.tqdm(
+                            index_name_pipe,
+                            desc='in-dkg-flow'
+                        )
+                    # Mapping index to URL
+                    url_index_name_pipe = map(
+                        lambda index: (
+                            self.get_url(index),
+                            index),
+                        index_name_pipe)
 
-                # Download Json from URL
-                json_index_name_pipe = th_exc.imap_unordered(
-                    InferenceEngine._th_run, url_index_name_pipe)
+                    # Download Json from URL
+                    json_index_name_pipe = th_exc.imap_unordered(
+                        InferenceEngine._th_run, url_index_name_pipe)
 
-                if verbose:
-                    json_index_name_pipe = tqdm.tqdm(
-                        json_index_name_pipe, total=len(indexs),
-                        desc='json-flow')
+                    if verbose:
+                        json_index_name_pipe = tqdm.tqdm(
+                            json_index_name_pipe, total=len(indexs),
+                            desc='json-flow')
 
-                # Remove errorneous Json
-                json_index_name_pipe = self.filter_errorneous_json(
-                    json_index_name_pipe)
-                json_index_name_batch_pipe = InferenceEngine._batchwise_generator(
-                    json_index_name_pipe, batch_size=self._json_per_worker)
+                    # Remove errorneous Json
+                    json_index_name_pipe = self.filter_errorneous_json(
+                        json_index_name_pipe)
+                    json_index_name_batch_pipe = InferenceEngine._batchwise_generator(
+                        json_index_name_pipe, batch_size=self._json_per_worker)
 
-                # Inferencing Json schemas from Json Batches
-                json_schema_indexs_pipe = pr_exc.imap_unordered(
-                    InferenceEngine._pr_run, json_index_name_batch_pipe)
+                    # Inferencing Json schemas from Json Batches
+                    json_schema_indexs_pipe = pr_exc.imap_unordered(
+                        InferenceEngine._pr_run, json_index_name_batch_pipe)
 
-                if verbose:
-                    json_schema_indexs_pipe = tqdm.tqdm(
-                        json_schema_indexs_pipe, total=round(
-                            len(indexs) / self._json_per_worker),
-                        desc='schema-batch-flow')
+                    if verbose:
+                        json_schema_indexs_pipe = tqdm.tqdm(
+                            json_schema_indexs_pipe, total=round(
+                                len(indexs) / self._json_per_worker),
+                            desc='schema-batch-flow')
 
-                # Reducing Json Schemas into One Union Json Schema
-                self._schema_holder.reduce(json_schema_indexs_pipe)
-
-        # Saving the final schema and process record as Pickles
-        self._schema_holder.save()
-        self._index_filter.save()
-        return self._schema_holder.union_schema
+                    # Reducing Json Schemas into One Union Json Schema
+                    self._schema_holder.reduce(json_schema_indexs_pipe)
+            return self._schema_holder.union_schema
+        except BaseException as e:
+            raise e
+        finally:
+            # Saving the final schema and process record as Pickles
+            self._schema_holder.save()
+            self._index_filter.save()
+        
 
     @staticmethod
     def _th_run(instance):
