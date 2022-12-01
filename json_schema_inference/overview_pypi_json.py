@@ -33,7 +33,7 @@ import pprint
 
 
 if __name__ == '__main__':
-    p = PypiPackageSchemaInferencer(inference_worker_cnt=1)
+    p = PypiPackageSchemaInferencer()
     schema = p.get_schema()
     pprint.pprint(schema)
     releases = Releases('pandas', schema=schema).releases
