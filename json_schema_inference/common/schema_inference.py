@@ -47,12 +47,32 @@ import typing
 import requests
 import tqdm
 from multiprocessing.pool import ThreadPool
+import json
 from .schema_fitter import fit, try_unify_dict
 from .schema_objs import Union, JsonSchema
 
 
-__all__ = ['APIInferenceEngine']
+__all__ = ['APIInferenceEngine', 'JsonlInferenceEngine', 'InferenceEngine']
+class InferenceEngine:
+    @staticmethod
+    def get_schema(json_batch):
+        return Union.set(
+            map(lambda js: fit(js, unify_callback=try_unify_dict), json_batch))
 
+class JsonlInferenceEngine:
+    @property
+    def jsonl_path(self):
+        raise NotImplementedError
+    
+    def get_schema(self, verbose=True):
+        if verbose:
+            total = sum(1 for _ in open(self.jsonl_path, 'r')) 
+        with open(self.jsonl_path, 'r') as f:
+            json_dict_gen = map(json.loads, f)
+            if verbose:
+                json_dict_gen = tqdm.tqdm(json_dict_gen, total=total, desc=self.jsonl_path)
+            schema = InferenceEngine.get_schema(json_dict_gen)
+        return schema
 class APIInferenceEngine:
     """
     Args:
@@ -205,14 +225,11 @@ class APIInferenceEngine:
     def _pr_run(
             json_index_name_batch: typing.List[typing.Tuple[typing.Dict, str]]):
         index_name_batch = list(map(lambda x: x[1], json_index_name_batch))
-        json_schema = APIInferenceEngine._get_schema(
+        json_schema = InferenceEngine.get_schema(
             map(lambda x: x[0], json_index_name_batch))
         return json_schema, index_name_batch
 
-    @staticmethod
-    def _get_schema(json_batch):
-        return Union.set(
-            map(lambda js: fit(js, unify_callback=try_unify_dict), json_batch))
+    
 
 
 class IndexCuckooFilter:
