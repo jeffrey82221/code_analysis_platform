@@ -279,7 +279,6 @@ class InferenceEngine:
             # Saving the final schema and process record as Pickles
             self._schema_holder.save()
             self._index_filter.save()
-        
 
     @staticmethod
     def _th_run(instance):

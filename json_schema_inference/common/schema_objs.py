@@ -96,9 +96,9 @@ class Simple(JsonSchema):
 
     def __repr__(self):
         if self._content is None:
-            return 'None'
+            return 'Simple(None)'
         else:
-            return self._content.__name__
+            return f'Simple({self._content.__name__})'
 
 
 class List(JsonSchema):
@@ -110,7 +110,7 @@ class List(JsonSchema):
             self._content, JsonSchema), 'List content should be JsonSchema'
 
     def __repr__(self):
-        return f'List[{self._content}]'
+        return f'List({self._content})'
 
     def __or__(self, e):
         if isinstance(e, List):
@@ -129,7 +129,7 @@ class Unknown(JsonSchema):
         return e
 
     def __repr__(self):
-        return '?'
+        return 'Unknown()'
 
 
 class Union(JsonSchema):
@@ -152,7 +152,7 @@ class Union(JsonSchema):
 
     def __repr__(self):
         content_str = ','.join(map(str, list(self._content)))
-        return f'Union[{content_str}]'
+        return f'Union([{content_str}])'
 
     def __or__(self, e):
         new = copy.deepcopy(e)
@@ -176,7 +176,7 @@ class Optional(Union):
         super().__init__({Simple(None), content})
 
     def __repr__(self):
-        return f'Optional[{self._the_content}]'
+        return f'Optional({self._the_content})'
 
     def __or__(self, e: JsonSchema):
         old = copy.deepcopy(self)
@@ -207,7 +207,7 @@ class Dict(JsonSchema):
                 self._content[key], JsonSchema), 'Dict content value should be JsonSchema'
 
     def __repr__(self):
-        return f'Dict[{self._content}]'
+        return f'Dict({self._content})'
 
     def __hash__(self):
         return hash(tuple(sorted(self._content.items())))
@@ -260,12 +260,14 @@ class DynamicDict(Dict):
     def __repr__(self):
         content_strs = []
         for key, cnt in self._key_counter.most_common(10):
-            content_strs.append(f'({key}, {cnt}): {self._content[key]}')
+            content_strs.append(f'("{key}", {cnt}): {self._content[key]}')
         content_whole_str = ','.join(content_strs)
-        return f'DynamicDict[{{{content_whole_str},...}}]'
+        content_whole_str = '{' + content_whole_str + '}'
+        return f'DynamicDict({content_whole_str})'
 
     def __hash__(self):
-        return hash(tuple(sorted(self._content.items()))) + hash(tuple(sorted(self._key_counter.items())))
+        return hash(tuple(sorted(self._content.items()))) + \
+            hash(tuple(sorted(self._key_counter.items())))
 
     def __or__(self, e):
         result_dict = dict()
@@ -280,7 +282,8 @@ class DynamicDict(Dict):
                     result_dict[key] = old._content[key]
                 elif key in new._content:
                     result_dict[key] = new._content[key]
-            return DynamicDict(result_dict, old._key_counter + new._key_counter)
+            return DynamicDict(
+                result_dict, old._key_counter + new._key_counter)
         elif isinstance(e, Dict):
             old = copy.deepcopy(self)
             new = copy.deepcopy(e)
@@ -298,6 +301,7 @@ class DynamicDict(Dict):
         else:
             return self._base_or(e)
 
+
 class UniformDict(JsonSchema):
     """
     Dictionary where value elements
@@ -312,7 +316,7 @@ class UniformDict(JsonSchema):
             self._content, JsonSchema), f'UniformDict content should be JsonSchema, but it is {self._content}'
 
     def __repr__(self):
-        return f'UniformDict[{self._content}]'
+        return f'UniformDict({self._content})'
 
     def __or__(self, e):
         if isinstance(e, UniformDict):

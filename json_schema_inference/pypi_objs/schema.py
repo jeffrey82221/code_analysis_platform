@@ -14,7 +14,6 @@ class PypiPackageSchemaInferencer(InferenceEngine):
             schema_dump=schema_dump
         )
 
-
     def index_generator(self) -> typing.Iterable[str]:
         with open('../pypi_graph_analysis/package_names.txt', 'r') as f:
             for i, pkg in enumerate(map(lambda p: p.strip(), f)):
