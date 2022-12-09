@@ -16,7 +16,7 @@ TODO:
             e.g., DynamicDict[{'apple' (120): str, 'banana' (123): str, ..., 'car' (1): str}]
         3. Allow counter to be added together
     )
-- [ ] Enable representing the __init__ of DynamicDict (same as other schema types) 
+- [ ] Enable representing the __init__ of DynamicDict (same as other schema types)
 """
 import abc
 import copy
