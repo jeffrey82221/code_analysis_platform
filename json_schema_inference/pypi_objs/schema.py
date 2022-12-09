@@ -1,8 +1,8 @@
 import typing
-from common.api_schema_inference import InferenceEngine
+from common.schema_inference import APIInferenceEngine
 
 
-class PypiPackageSchemaInferencer(InferenceEngine):
+class PypiPackageSchemaInferencer(APIInferenceEngine):
     def __init__(self, api_thread_cnt=30, inference_worker_cnt=4, json_per_worker=10, limit=None,
                  cuckoo_dump='pypi_cuckoo.pickle', schema_dump='pypi_schema.pickle'):
         self._limit = limit
