@@ -58,8 +58,28 @@ class InferenceEngine:
     def get_schema(json_batch):
         return Union.set(
             map(lambda js: fit(js, unify_callback=try_unify_dict), json_batch))
+    @staticmethod
+    def _batchwise_generator(gen, batch_size=100):
+        batch = []
+        for i, element in enumerate(gen):
+            batch.append(element)
+            if i % batch_size == (batch_size - 1):
+                yield batch
+                del batch
+                batch = []
+        if batch:
+            yield batch
 
 class JsonlInferenceEngine:
+    def __init__(self, inference_worker_cnt=8, json_per_worker = 1000):
+        self._inference_worker_cnt = inference_worker_cnt
+        if self._inference_worker_cnt > 1:
+            from ray.util.multiprocessing import Pool
+            self.Pool = Pool
+        else:
+            self.Pool = ThreadPool
+        self._json_per_worker = json_per_worker
+
     @property
     def jsonl_path(self):
         raise NotImplementedError
@@ -68,11 +88,27 @@ class JsonlInferenceEngine:
         if verbose:
             total = sum(1 for _ in open(self.jsonl_path, 'r')) 
         with open(self.jsonl_path, 'r') as f:
-            json_dict_gen = map(json.loads, f)
-            if verbose:
-                json_dict_gen = tqdm.tqdm(json_dict_gen, total=total, desc=self.jsonl_path)
-            schema = InferenceEngine.get_schema(json_dict_gen)
+            with self.Pool(processes=self._inference_worker_cnt) as pr_exc:
+                json_pipe = map(json.loads, f)
+                if verbose:
+                    json_pipe = tqdm.tqdm(json_pipe, total=total, desc=self.jsonl_path)
+                json_batch_pipe = InferenceEngine._batchwise_generator(
+                    json_pipe, batch_size=self._json_per_worker)
+                # Inferencing Json schemas from Json Batches
+                json_schema_pipe = pr_exc.imap_unordered(
+                        JsonlInferenceEngine._pr_run, json_batch_pipe)
+                if verbose:
+                    json_schema_pipe = tqdm.tqdm(json_schema_pipe, total=int(total/self._json_per_worker), 
+                        desc='batch-wise schema')
+                schema = Union.set(json_schema_pipe)
         return schema
+    
+    @staticmethod
+    def _pr_run(
+            json_batch: typing.List[typing.Dict]):
+        json_schema = InferenceEngine.get_schema(json_batch)
+        return json_schema
+
 class APIInferenceEngine:
     """
     Args:
@@ -161,7 +197,7 @@ class APIInferenceEngine:
                     # Remove errorneous Json
                     json_index_name_pipe = self.filter_errorneous_json(
                         json_index_name_pipe)
-                    json_index_name_batch_pipe = APIInferenceEngine._batchwise_generator(
+                    json_index_name_batch_pipe = InferenceEngine._batchwise_generator(
                         json_index_name_pipe, batch_size=self._json_per_worker)
 
                     # Inferencing Json schemas from Json Batches
@@ -209,17 +245,7 @@ class APIInferenceEngine:
             lambda x: self.is_valid_json(x[0]), json_index_name_pipe)
         return json_index_name_pipe
 
-    @staticmethod
-    def _batchwise_generator(gen, batch_size=100):
-        batch = []
-        for i, element in enumerate(gen):
-            batch.append(element)
-            if i % batch_size == (batch_size - 1):
-                yield batch
-                del batch
-                batch = []
-        if batch:
-            yield batch
+    
 
     @staticmethod
     def _pr_run(
