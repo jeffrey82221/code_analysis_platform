@@ -6,10 +6,9 @@ How to execute in pypy:
 `pypy3 overview_by_pypy.py`
 """
 from common.schema import InferenceEngine
-from common.schema.objs import Union
 import json
 import tqdm
-jsonl_path = 'data/small_test.jsonl'
+jsonl_path = 'data/kaggle_data/test.jsonl'
 total = sum(1 for _ in open(jsonl_path))
 with open(jsonl_path) as f:
     json_pipe = map(json.loads, f)

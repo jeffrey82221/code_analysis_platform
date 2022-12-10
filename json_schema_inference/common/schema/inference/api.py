@@ -39,7 +39,6 @@ import abc
 import os
 import pickle
 import math
-from cuckoo.filter import CuckooFilter
 import logging
 import signal
 import sys
@@ -47,8 +46,7 @@ import typing
 import requests
 import tqdm
 from multiprocessing.pool import ThreadPool
-import json
-from ..objs import Union, JsonSchema
+from ..objs import JsonSchema
 from .base import InferenceEngine
 
 __all__ = ['APIInferenceEngine']
@@ -70,7 +68,7 @@ class APIInferenceEngine:
             (The invlid json would be ignored.)
     """
 
-    def __init__(self, api_thread_cnt=30, inference_worker_cnt=4, json_per_worker=10,
+    def __init__(self, api_thread_cnt=1000, inference_worker_cnt=4, json_per_worker=1000,
                  cuckoo_dump='cuckoo.pickle', schema_dump='schema.pickle'):
         self._api_thread_cnt = api_thread_cnt
         self._inference_worker_cnt = inference_worker_cnt
@@ -231,6 +229,7 @@ class IndexCuckooFilter:
                 'false positive error rate of cuckoo filter:',
                 error_rate)
             logging.info('bucket size of cuckoo filter:', bucket_size)
+            from cuckoo.filter import CuckooFilter
             self._cuckoo = CuckooFilter(
                 capacity=capacity,
                 error_rate=error_rate,
