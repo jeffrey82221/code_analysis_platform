@@ -16,6 +16,7 @@ TODO:
             e.g., DynamicDict[{'apple' (120): str, 'banana' (123): str, ..., 'car' (1): str}]
         3. Allow counter to be added together
     )
+- [ ] Allow another DynamicDict to capture mandatory fields & co-occurrence relationship between fields
 - [ ] Enable representing the __init__ of DynamicDict (same as other schema types)
 """
 import abc
@@ -135,7 +136,7 @@ class Unknown(JsonSchema):
 
 class Union(JsonSchema):
     @staticmethod
-    def set(json_schemas: typing.List[JsonSchema]) -> JsonSchema:
+    def set(json_schemas: typing.Set[JsonSchema]) -> JsonSchema:
         if json_schemas:
             result = reduce(lambda a, b: a | b, json_schemas)
         else:
@@ -153,7 +154,8 @@ class Union(JsonSchema):
 
     def __repr__(self):
         content_str = ','.join(map(str, list(self._content)))
-        return f'Union([{content_str}])'
+        content_str = '{' + content_str + '}'
+        return f'Union({content_str})'
 
     def __or__(self, e):
         new = copy.deepcopy(e)
