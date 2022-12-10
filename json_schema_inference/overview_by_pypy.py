@@ -5,7 +5,7 @@ Result: 2.3 X speed up.
 How to execute in pypy: 
 `pypy3 overview_by_pypy.py`
 """
-from common.schema.base import InferenceEngine
+from common.schema import InferenceEngine
 from common.schema.objs import Union
 import json
 import tqdm
