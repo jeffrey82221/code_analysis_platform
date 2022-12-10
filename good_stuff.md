@@ -12,6 +12,7 @@ Holds the useful packages found via the this repo. The reason I put a package he
 # TO-Study List: 
 - scalable-cuckoo-filter
 - pybloomfiltermmap3
+- execnet：enable fusing of pypy and python processes
 
 
 # General Purpose Packages 
