@@ -1,8 +1,8 @@
 """
 A basic json schema inference engine
 """
-from .schema_fitter import fit, try_unify_dict
-from .schema_objs import Union, JsonSchema
+from .fitter import fit, try_unify_dict
+from .objs import Union, JsonSchema
 
 
 __all__ = ['InferenceEngine']

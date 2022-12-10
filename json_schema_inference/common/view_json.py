@@ -18,8 +18,8 @@ import concurrent
 from functools import reduce
 from redis_dec import Cache
 from redis import StrictRedis
-from . import schema_fitter
-from .schema_objs import Dict, List, UniformDict, Union, Simple, Optional, Unknown, JsonSchema
+from .schema.fitter import fit
+from .schema.objs import Dict, List, UniformDict, Union, Simple, Optional, Unknown, JsonSchema
 
 __all__ = ['SingleView', 'OverView']
 
@@ -50,7 +50,7 @@ class SingleView:
     @property
     def schema(self):
         if self._schema is None:
-            self._schema = schema_fitter.fit(
+            self._schema = fit(
                 self.json, unify_callback=schema_fitter.try_unify_dict)
         return self._schema
 
@@ -121,7 +121,7 @@ class SingleView:
                                 [(k, apply_recursion(e, tokens)) for k, e in json.items()])
                         elif token == '_list_':
                             return set([apply_recursion(e, tokens)
-                                       for e in json])
+                                        for e in json])
                         else:
                             result = json[token]
                             if isinstance(result, dict):

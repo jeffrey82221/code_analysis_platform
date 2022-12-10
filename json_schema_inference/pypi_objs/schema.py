@@ -1,5 +1,5 @@
 import typing
-from common.schema_inference import APIInferenceEngine
+from common.schema import APIInferenceEngine
 
 
 class PypiPackageSchemaInferencer(APIInferenceEngine):

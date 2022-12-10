@@ -48,8 +48,8 @@ import requests
 import tqdm
 from multiprocessing.pool import ThreadPool
 import json
-from .schema_objs import Union, JsonSchema
-from .inference_base import InferenceEngine
+from .objs import Union, JsonSchema
+from .base import InferenceEngine
 
 __all__ = ['APIInferenceEngine', 'JsonlInferenceEngine']
 
