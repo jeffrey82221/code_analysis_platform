@@ -1,3 +1,4 @@
+json_schema_inference/data/kaggle_data/*.jsonl
 *.json
 # *.csv
 .DS_Store

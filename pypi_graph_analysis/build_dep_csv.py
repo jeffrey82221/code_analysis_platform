@@ -1,5 +1,5 @@
 """
-Step 3: Build Dependency Edge List CSV file 
+Step 3: Build Dependency Edge List CSV file
 
 Input: deps/*.json
 Output: deps.csv

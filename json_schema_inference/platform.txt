@@ -1,0 +1,12 @@
+
+UNKNOWN
+all
+Independant
+Windows
+OS Independent
+Linux
+macosx_10_9_x86_64
+any
+unix
+linux
+Any

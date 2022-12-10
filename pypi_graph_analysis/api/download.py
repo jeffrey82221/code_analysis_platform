@@ -2,16 +2,16 @@
 """
 pip install pypistats
 """
+from redis_decorators import RedisCaching
+import time
+from httpx import HTTPStatusError
+import json
 import pypistats
 import sys
 """
 pip install redis-decorators
 pip install fakeredis
 """
-import json
-from httpx import HTTPStatusError
-import time
-from redis_decorators import RedisCaching
 caching = RedisCaching('redis://localhost:6379')
 # Define a custom `CacheElement`
 
