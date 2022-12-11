@@ -12,7 +12,7 @@ __all__ = ['JsonlInferenceEngine']
 
 
 class JsonlInferenceEngine:
-    def __init__(self, inference_worker_cnt=8, json_per_worker=1000):
+    def __init__(self, inference_worker_cnt=8, json_per_worker=10000):
         self._inference_worker_cnt = inference_worker_cnt
         if self._inference_worker_cnt > 1:
             from ray.util.multiprocessing import Pool

@@ -22,7 +22,7 @@ class TestEngine(JsonlInferenceEngine):
         return 'data/kaggle_data/test.jsonl'
 
 
-schema = TestEngine(inference_worker_cnt=8, json_per_worker=1000).get_schema()
+schema = TestEngine(inference_worker_cnt=8, json_per_worker=10000).get_schema()
 pprint.pprint(schema)
 
 
