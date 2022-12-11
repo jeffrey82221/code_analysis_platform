@@ -3,12 +3,12 @@ PyPy speed up experiment on schema inferencing
 Result: 2.3 X speed up. 
 
 1) How to execute in pypy: 
-`pypy3 overview_by_pypy.py`
+`pypy3 overview_speedup.py`
 
 2) How to compile into binary using Nuitka and execute the binary?
 
-`python -m nuitka overview_by_pypy.py --standalone --lto=no --nofollow-import-to=pytest --python-flag=nosite,-O --prefer-source-code --clang --plugin-enable=anti-bloat,implicit-imports,data-files,pylint-warnings`
-`./overview_by_pypy.dist/overview_by_pypy`
+`python -m nuitka overview_speedup.py --standalone --lto=no --nofollow-import-to=pytest --python-flag=nosite,-O --prefer-source-code --clang --plugin-enable=anti-bloat,implicit-imports,data-files,pylint-warnings`
+`./overview_speedup.dist/overview_speedup`
 
 NOTE: 
 - Speed up against python: 0.735 -> 0.546
