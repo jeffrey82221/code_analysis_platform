@@ -3,7 +3,7 @@ Get schema of jsonl
 & develop analysis platform on it.
 """
 import pprint
-from common.schema import JsonlInferenceEngine
+from common.inference import JsonlInferenceEngine
 
 
 class Engine(JsonlInferenceEngine):
