@@ -24,6 +24,12 @@ Run:
 NOTE: 
 - Speed up against python: 0.735 -> 0.546
 - Speed up against pypy: 0.751 -> 0.546
+
+TODO: 
+- [ ] Build a nuitka-base multiprocessing package. 
+    - [ ] Bridging C and python
+    - [ ] Easy deploy parallelizing function to nuitka C binary. 
+    - [ ] A map and unordered map interface for python development
 """
 from common.schema import InferenceEngine
 import json
