@@ -25,13 +25,20 @@ NOTE:
 - Speed up against python: 0.735 -> 0.546
 - Speed up against pypy: 0.751 -> 0.546
 
+3) How to compile `common.schema` into .so file
+
+```
+python -m nuitka common/schema --lto=no \
+    --nofollow-import-to=pytest --python-flag=nosite,-O --prefer-source-code \
+    --clang --plugin-enable=anti-bloat,implicit-imports,data-files,pylint-warnings
+```
 TODO: 
 - [ ] Build a nuitka-base multiprocessing package. 
     - [ ] Bridging C and python
     - [ ] Easy deploy parallelizing function to nuitka C binary. 
     - [ ] A map and unordered map interface for python development
 """
-from common.schema import InferenceEngine
+from get_schema import get_schema
 import json
 import getopt
 import sys
@@ -72,7 +79,7 @@ def main(inputs):
         json_pipe = map(json.loads, f)
         if verbose:
             json_pipe = progress(json_pipe, total=total)
-        schema = InferenceEngine.get_schema(json_pipe)
+        schema = get_schema(json_pipe)
     print(schema)
 
 if __name__ == '__main__':
