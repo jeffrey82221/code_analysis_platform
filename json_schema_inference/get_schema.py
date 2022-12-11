@@ -2,7 +2,8 @@
 Compile this module: 
 
 ```
-python -m nuitka --module --include-package=common get_schema.py
+python -m nuitka --module --include-package=schema schema --python-flag=nosite,-O --prefer-source-code \
+    --clang --plugin-enable=anti-bloat,implicit-imports,data-files,pylint-warnings
 ```
 """
 
