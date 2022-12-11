@@ -1,5 +1,3 @@
 
 from .inference import InferenceEngine
-from .inference import APIInferenceEngine, JsonlInferenceEngine
-
-__all__ = ['APIInferenceEngine', 'JsonlInferenceEngine', 'InferenceEngine']
+__all__ = ['InferenceEngine']
