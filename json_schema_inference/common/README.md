@@ -1,3 +1,9 @@
+# How to compile `schema` package?
+
+```
+python -m nuitka --module --include-package=schema schema --python-flag=nosite,-O --prefer-source-code \
+    --clang --plugin-enable=anti-bloat,implicit-imports,data-files,pylint-warnings
+```
 # Paper Study `Parametric Schema Inference for Massive JSON Datasets`
 
 ## How the paper define the json schema ? 

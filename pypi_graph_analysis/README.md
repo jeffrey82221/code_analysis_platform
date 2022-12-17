@@ -32,7 +32,7 @@ redis-stack-server --port 9001
 
 ```
 pip install redisgraph-bulk-loader
-redisgraph-bulk-insert DGraph -h 127.0.0.1 -p 9001 -n pkg_full.csv -r dep_edge.csv
+redisgraph-bulk-insert DGraph -h 127.0.0.1 -p 9002 -n pkg_full.csv -r dep_edge.csv
 ```
 
 If DGraph already exists, flush the redis-stack-server to clean up all data

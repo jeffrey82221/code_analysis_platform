@@ -18,8 +18,8 @@ import concurrent
 from functools import reduce
 from redis_dec import Cache
 from redis import StrictRedis
-from .schema.fitter import fit
-from .schema.objs import Dict, List, UniformDict, Union, Simple, Optional, Unknown, JsonSchema
+from jsonschema_inference.schema.fitter import fit
+from jsonschema_inference.schema.objs import Dict, List, UniformDict, Union, Simple, Optional, Unknown, JsonSchema
 
 __all__ = ['SingleView', 'OverView']
 
